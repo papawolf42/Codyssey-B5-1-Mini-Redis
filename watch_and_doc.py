@@ -84,7 +84,7 @@ def make_slug(question_text):
 
 
 def git_commit_doc(filename, doc_id_str, title_text):
-    """study 브랜치에 질문 문서 단위로 커밋을 남긴다."""
+    """study 브랜치에 질문 문서 단위로 커밋 및 push를 수행한다."""
     try:
         subprocess.run(
             ["git", "-C", SCRIPT_DIR, "add", os.path.join("docs", filename)],
@@ -97,9 +97,17 @@ def git_commit_doc(filename, doc_id_str, title_text):
             capture_output=True,
             check=True,
         )
-        print(f"[Watcher] Git 커밋 완료: {commit_msg}")
+        print(f"[Watcher] Git 커밋 완료: {commit_msg}", flush=True)
+
+        # origin/study로 자동 push
+        subprocess.run(
+            ["git", "-C", SCRIPT_DIR, "push", "origin", "study"],
+            capture_output=True,
+            check=True,
+        )
+        print(f"[Watcher] Git Push 완료: origin/study", flush=True)
     except Exception as e:
-        print(f"[Watcher Git Error] {e}")
+        print(f"[Watcher Git Error] {e}", flush=True)
 
 
 def process_new_steps():
