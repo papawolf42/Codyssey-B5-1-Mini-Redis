@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>0001 · 그림으로 쉽게 이해하는 Mini Redis (B5-1)</title>
+  <style>
+    :root {
+      --bg: #f7f8fc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #526075;
+      --border: #e2e8f0;
+      --blue: #2563eb;
+      --blue-soft: #eff6ff;
+      --blue-border: #bfdbfe;
+      --green: #059669;
+      --green-soft: #ecfdf5;
+      --green-border: #a7f3d0;
+      --amber: #d97706;
+      --amber-soft: #fffbeb;
+      --amber-border: #fde68a;
+      --purple: #7c3aed;
+      --purple-soft: #f5f3ff;
+      --purple-border: #ddd6fe;
+      --red: #dc2626;
+      --red-soft: #fef2f2;
+      --red-border: #fecaca;
+      --shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+      --radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.75;
+      font-size: 16px;
+    }
+
+    .container {
+      max-width: 1020px;
+      margin: 0 auto;
+      padding: 32px 20px 80px;
+    }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 55%, #0ea5e9 100%);
+      color: #ffffff;
+      border-radius: 22px;
+      padding: 36px 32px;
+      box-shadow: 0 12px 32px rgba(37, 99, 235, 0.22);
+      margin-bottom: 28px;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.18);
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      margin-bottom: 12px;
+    }
+
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: 30px;
+      line-height: 1.3;
+    }
+
+    .hero p {
+      margin: 0;
+      font-size: 16.5px;
+      color: rgba(255, 255, 255, 0.92);
+      max-width: 780px;
+    }
+
+    /* TOC */
+    .toc {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 28px;
+    }
+
+    .toc a {
+      text-decoration: none;
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.15s ease;
+    }
+
+    .toc a:hover {
+      border-color: var(--blue);
+      color: var(--blue);
+      background: var(--blue-soft);
+    }
+
+    /* Sections / Cards */
+    section.card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .sec-num {
+      display: inline-block;
+      background: var(--blue-soft);
+      color: var(--blue);
+      font-weight: 800;
+      font-size: 13px;
+      padding: 3px 10px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 22px;
+      line-height: 1.35;
+    }
+
+    h3 {
+      margin: 22px 0 10px;
+      font-size: 18px;
+      color: #0f172a;
+    }
+
+    p {
+      margin: 0 0 12px;
+    }
+
+    /* Callouts */
+    .callout {
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin: 14px 0;
+      border: 1px solid transparent;
+    }
+
+    .callout.blue {
+      background: var(--blue-soft);
+      border-color: var(--blue-border);
+    }
+
+    .callout.green {
+      background: var(--green-soft);
+      border-color: var(--green-border);
+    }
+
+    .callout.amber {
+      background: var(--amber-soft);
+      border-color: var(--amber-border);
+    }
+
+    .callout.purple {
+      background: var(--purple-soft);
+      border-color: var(--purple-border);
+    }
+
+    .callout-title {
+      font-weight: 800;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    /* 3-keyword grid */
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .mini-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      background: #fcfdff;
+    }
+
+    .mini-card .tag {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 3px 9px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+
+    .tag-blue { background: var(--blue-soft); color: var(--blue); }
+    .tag-green { background: var(--green-soft); color: var(--green); }
+    .tag-amber { background: var(--amber-soft); color: var(--amber); }
+    .tag-purple { background: var(--purple-soft); color: var(--purple); }
+    .tag-red { background: var(--red-soft); color: var(--red); }
+
+    .mini-card h4 {
+      margin: 0 0 6px;
+      font-size: 17px;
+    }
+
+    .mini-card p {
+      margin: 0;
+      font-size: 14.5px;
+      color: var(--muted);
+    }
+
+    /* SVG wrapper */
+    .diagram-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin: 16px 0;
+      overflow-x: auto;
+    }
+
+    .diagram-caption {
+      font-size: 13.5px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    svg {
+      display: block;
+      margin: 0 auto;
+      max-width: 100%;
+      height: auto;
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    }
+
+    /* Code */
+    code {
+      font-family: "JetBrains Mono", "Cascadia Code", "Consolas", monospace;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 0.9em;
+    }
+
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 16px 18px;
+      border-radius: 12px;
+      overflow-x: auto;
+      font-family: "JetBrains Mono", "Cascadia Code", "Consolas", monospace;
+      font-size: 13.5px;
+      line-height: 1.6;
+      margin: 12px 0;
+    }
+
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 14.5px;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f1f5f9;
+      font-weight: 700;
+    }
+
+    /* Interactive simulator */
+    .sim-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 14px 0;
+    }
+
+    .sim-btn {
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--text);
+      padding: 9px 14px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .sim-btn:hover {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    .sim-btn.active {
+      background: var(--blue);
+      color: #ffffff;
+      border-color: var(--blue);
+    }
+
+    .sim-stage {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      margin-top: 10px;
+    }
+
+    .sim-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px dashed #cbd5e1;
+    }
+
+    .sim-cmd {
+      font-family: "JetBrains Mono", "Consolas", monospace;
+      background: #0f172a;
+      color: #38bdf8;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .sim-mem {
+      font-weight: 700;
+      font-size: 14px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 8px;
+    }
+
+    .sim-panels {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .sim-panel {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    .sim-panel h5 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      margin: 3px 4px 3px 0;
+      border: 1px solid transparent;
+    }
+
+    .pill-blue { background: var(--blue-soft); color: var(--blue); border-color: var(--blue-border); }
+    .pill-green { background: var(--green-soft); color: var(--green); border-color: var(--green-border); }
+    .pill-amber { background: var(--amber-soft); color: var(--amber); border-color: var(--amber-border); }
+    .pill-red { background: var(--red-soft); color: var(--red); border-color: var(--red-border); text-decoration: line-through; }
+
+    .sim-explain {
+      margin-top: 14px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 14.5px;
+    }
+
+    .arrow-inline {
+      font-weight: 800;
+      color: #64748b;
+      margin: 0 3px;
+    }
+
+    @media (max-width: 640px) {
+      .hero { padding: 26px 20px; }
+      .hero h1 { font-size: 24px; }
+      section.card { padding: 20px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- HERO -->
+    <header class="hero">
+      <div class="hero-badge">B5-1 쉬운 개념 가이드 · 0001</div>
+      <h1>그림으로 술술 이해하는 Mini Redis</h1>
+      <p>
+        어려운 개발 용어는 잠깐 내려놓고, <strong>“컴퓨터 안에 초고속 사물함을 만든다”</strong>고 생각해 볼게요.
+        이 페이지 하나만 끝까지 읽으면 전체 구조와 <code>Entry</code>, <code>MRU/LRU</code>, <code>DLL</code>, <code>Min Heap</code>, 그리고 <code>SET/GET</code> 같은 명령어까지 한 번에 연결됩니다.
+      </p>
+    </header>
+
+    <!-- TOC -->
+    <nav class="toc">
+      <a href="#sec1">1. 궁금증 먼저 해결!</a>
+      <a href="#sec2">2. 핵심 재료 3가지</a>
+      <a href="#sec3">3. Entry 상자가 뭐예요?</a>
+      <a href="#sec4">4. 전체 연결 큰 그림</a>
+      <a href="#sec5">5. DLL · MRU · LRU 쉽게 보기</a>
+      <a href="#sec6">6. Min Heap · expire_at 쉽게 보기</a>
+      <a href="#sec7">7. 직접 눌러보는 동작 체험</a>
+      <a href="#sec8">8. 명령어 10개 완전 정복</a>
+      <a href="#sec9">9. unittest와 개발 순서</a>
+    </nav>
+
+    <!-- SEC 1: FAQ -->
+    <section id="sec1" class="card">
+      <span class="sec-num">STEP 1 · 질문부터 바로 풀기</span>
+      <h2>Q1. <code>user:2</code>에서 콜론(<code>:</code>)은 Redis 문법인가요?</h2>
+      <p>
+        <strong>아니요, 문법이 아니라 사람들이 정한 “이름 짓기 약속”이에요!</strong>
+      </p>
+      <p>
+        실제 회사나 개발자들이 Redis에 데이터를 넣을 때, 키 이름이 <code>1</code>, <code>2</code>, <code>apple</code>처럼 섞이면 헷갈리니까
+        <strong>“이건 user(회원) 데이터 중 2번이야”</strong>라는 뜻으로 가운데에 콜론(<code>:</code>)을 붙여서 <code>"user:2"</code>라고 자주 적습니다.
+      </p>
+      <div class="callout blue">
+        <span class="callout-title">컴퓨터 눈에는 그냥 평범한 글자예요</span>
+        프로그램 입장에서는 <code>"user:2"</code>나 <code>"user_2"</code>나 <code>"철수"</code>나 똑같은 문자열(글자)입니다. 콜론이 특별한 명령이나 문법 기능을 하지는 않아요!
+      </div>
+
+      <h3>Q2. 결국 핵심 키워드 3개로 Redis를 만든다고 생각해도 될까요?</h3>
+      <p>
+        <strong>네, 맞습니다! 딱 3가지 부품으로 만든다고 생각하면 됩니다.</strong><br />
+        다만 이름만 살짝 바로잡자면, <code>least heap</code>이 아니라 <strong><code>Min Heap</code>(최소 힙)</strong>이라고 부릅니다.
+      </p>
+    </section>
+
+    <!-- SEC 2: 3 KEYWORDS -->
+    <section id="sec2" class="card">
+      <span class="sec-num">STEP 2 · 큰 그림</span>
+      <h2>Redis를 움직이는 3가지 핵심 부품 (도서관 비유)</h2>
+      <p>
+        우리가 만들 Mini Redis는 메모리가 한정된 작은 도서관과 비슷합니다. 이 도서관이 빠르고 똑똑하게 돌아가려면 <strong>직원 3명(자료구조 3개)</strong>이 각자 한 가지 일만 맡아서 협력합니다.
+      </p>
+
+      <div class="grid-3">
+        <div class="mini-card">
+          <span class="tag tag-blue">부품 1 · 빠르게 찾기</span>
+          <h4>HashMap (해시맵)</h4>
+          <p>
+            <strong>역할:</strong> 도서관 색인 카드 / 사물함 번호표.<br />
+            <code>"user:2"</code>라고 이름만 부르면, 몇만 개가 있어도 <strong>1초 만에</strong> 그 사물함이 어디 있는지 찾아줍니다.
+          </p>
+        </div>
+
+        <div class="mini-card">
+          <span class="tag tag-green">부품 2 · 자리 비우기</span>
+          <h4>Doubly Linked List (DLL)</h4>
+          <p>
+            <strong>역할:</strong> 최근에 쓴 순서대로 줄 세우기.<br />
+            방금 쓴 건 <strong>맨 앞(MRU)</strong>, 오래 안 쓴 건 <strong>맨 뒤(LRU)</strong>로 보내서, 방이 꽉 차면 맨 뒤부터 내보냅니다.
+          </p>
+        </div>
+
+        <div class="mini-card">
+          <span class="tag tag-amber">부품 3 · 유통기한 관리</span>
+          <h4>Min Heap (최소 힙)</h4>
+          <p>
+            <strong>역할:</strong> 유통기한 알람시계.<br />
+            “몇 초 뒤에 지워져야 하는지”를 모아두고, <strong>가장 빨리 상할 물건</strong>을 항상 맨 꼭대기에 올려 감시합니다.
+          </p>
+        </div>
+      </div>
+
+      <div class="callout green">
+        <span class="callout-title">왜 굳이 3개나 쓰나요?</span>
+        <strong>HashMap</strong>은 찾기는 엄청 빠른데 “누가 제일 오래됐는지” 모르고, <strong>DLL</strong>은 순서는 잘 아는데 “특정 이름 찾기”가 느리고, <strong>Min Heap</strong>은 “가장 빠른 유통기한”만 기가 막히게 잘 찾습니다.<br />
+        그래서 각자 잘하는 것만 맡겨서 서로 손잡고 일하게 만든 거예요!
+      </div>
+    </section>
+
+    <!-- SEC 3: ENTRY -->
+    <section id="sec3" class="card">
+      <span class="sec-num">STEP 3 · Entry란 무엇인가</span>
+      <h2><code>Entry</code>는 정보를 한데 묶어 담은 “보관 상자”예요</h2>
+      <p>
+        보통 사물함에는 <code>"user:2" → "Bob"</code>처럼 값(<code>"Bob"</code>) 하나만 넣을 것 같죠?
+        그런데 우리 사물함은 <strong>① 실제 값</strong>도 기억해야 하고, <strong>② 유통기한</strong>도 기억해야 하고, <strong>③ 줄에서 몇 번째인지</strong>도 기억해야 합니다.
+      </p>
+      <p>
+        그래서 이 3가지를 하나의 작은 상자에 묶어 넣고, 그 상자를 영어 단어로 <strong><code>Entry</code>(엔트리, 한 건의 기록)</strong>라고 부릅니다.
+      </p>
+
+      <div class="diagram-box">
+        <svg viewBox="0 0 820 230" width="820" height="230" aria-label="Entry 상자 구조 그림">
+          <!-- Key badge -->
+          <rect x="20" y="75" width="140" height="72" rx="14" fill="#eff6ff" stroke="#2563eb" stroke-width="2.5"/>
+          <text x="90" y="104" text-anchor="middle" font-size="13" font-weight="700" fill="#2563eb">키 (이름표)</text>
+          <text x="90" y="130" text-anchor="middle" font-size="18" font-weight="800" fill="#0f172a">"user:2"</text>
+
+          <!-- Arrow -->
+          <line x1="160" y1="111" x2="230" y2="111" stroke="#2563eb" stroke-width="3"/>
+          <polygon points="230,104 244,111 230,118" fill="#2563eb"/>
+          <text x="200" y="98" text-anchor="middle" font-size="12" font-weight="700" fill="#475569">가리킴</text>
+
+          <!-- Entry Box -->
+          <rect x="246" y="22" width="550" height="184" rx="18" fill="#ffffff" stroke="#7c3aed" stroke-width="3"/>
+          <rect x="246" y="22" width="550" height="42" rx="16" fill="#7c3aed"/>
+          <rect x="246" y="48" width="550" height="16" fill="#7c3aed"/>
+          <text x="521" y="49" text-anchor="middle" font-size="16" font-weight="800" fill="#ffffff">Entry 상자 ("user:2"에 대한 모든 정보가 담긴 묶음)</text>
+
+          <!-- Field 1: value -->
+          <rect x="266" y="80" width="155" height="106" rx="12" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+          <text x="343" y="106" text-anchor="middle" font-size="14" font-weight="800" fill="#0f172a">1. value</text>
+          <text x="343" y="132" text-anchor="middle" font-size="18" font-weight="800" fill="#2563eb">"Bob"</text>
+          <text x="343" y="160" text-anchor="middle" font-size="12" fill="#526075">실제 저장된 값</text>
+
+          <!-- Field 2: expire_at -->
+          <rect x="441" y="80" width="165" height="106" rx="12" fill="#fffbeb" stroke="#fcd34d" stroke-width="2"/>
+          <text x="523" y="106" text-anchor="middle" font-size="14" font-weight="800" fill="#92400e">2. expire_at</text>
+          <text x="523" y="132" text-anchor="middle" font-size="15" font-weight="800" fill="#d97706">103.0초 (또는 None)</text>
+          <text x="523" y="160" text-anchor="middle" font-size="12" fill="#78350f">언제 사라질지(만료 시각)</text>
+
+          <!-- Field 3: lru_node -->
+          <rect x="626" y="80" width="150" height="106" rx="12" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="2"/>
+          <text x="701" y="106" text-anchor="middle" font-size="14" font-weight="800" fill="#065f46">3. lru_node</text>
+          <text x="701" y="132" text-anchor="middle" font-size="15" font-weight="800" fill="#059669">줄 속 위치 화살표</text>
+          <text x="701" y="160" text-anchor="middle" font-size="12" fill="#065f46">DLL의 내 자리 주소</text>
+        </svg>
+        <div class="diagram-caption">
+          Entry는 “값 + 만료 시각 + 줄에서의 내 위치” 3개를 담아두는 한 세트 상자입니다.
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>상자 속 이름</th>
+            <th>쉬운 뜻</th>
+            <th>왜 들어있나요?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>value</code></td>
+            <td>저장한 실제 내용</td>
+            <td><code>GET user:2</code>라고 물었을 때 <code>"Bob"</code>이라고 답해주기 위해서입니다.</td>
+          </tr>
+          <tr>
+            <td><code>expire_at</code></td>
+            <td>사라질 예정 시각</td>
+            <td>예를 들어 지금이 100초이고 3초 뒤 만료면 <code>103.0</code>이 적혀 있습니다. 유통기한이 없으면 비어있음(<code>None</code>).</td>
+          </tr>
+          <tr>
+            <td><code>lru_node</code></td>
+            <td>줄 서기 표지판(위치 주소)</td>
+            <td><strong>가장 중요한 아이디어!</strong> 이 주소 덕분에 DLL 줄에서 <code>"user:2"</code>를 찾아 헤매지 않고, 바로 손잡고 맨 앞으로 끌어올 수 있습니다.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- SEC 4: BIG PICTURE -->
+    <section id="sec4" class="card">
+      <span class="sec-num">STEP 4 · 전체 조감도</span>
+      <h2>3가지가 하나로 연결된 전체 그림</h2>
+      <p>
+        이제 방금 배운 <strong>HashMap</strong>, <strong>Entry</strong>, <strong>DLL (MRU ↔ LRU)</strong>, <strong>Min Heap</strong>이 한 화면에서 어떻게 연결되는지 보세요.
+        (현재 <code>user:3</code>, <code>user:2</code>, <code>user:1</code>이 저장되어 있고, <code>user:2</code>에 만료 시간이 걸린 상태입니다.)
+      </p>
+
+      <div class="diagram-box">
+        <svg viewBox="0 0 920 470" width="920" height="470" aria-label="Mini Redis 전체 아키텍처 다이어그램">
+          <defs>
+            <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L9,3 z" fill="#2563eb"/>
+            </marker>
+            <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L9,3 z" fill="#059669"/>
+            </marker>
+            <marker id="arrowAmber" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L9,3 z" fill="#d97706"/>
+            </marker>
+          </defs>
+
+          <!-- 1. HASHMAP BOX (LEFT TOP) -->
+          <rect x="18" y="18" width="245" height="250" rx="16" fill="#eff6ff" stroke="#2563eb" stroke-width="2.5"/>
+          <text x="140" y="46" text-anchor="middle" font-size="16" font-weight="800" fill="#1e40af">1. HashMap (빠른 목차)</text>
+          <text x="140" y="66" text-anchor="middle" font-size="12" fill="#3b82f6">이름 부르면 Entry 상자를 바로 찾음</text>
+
+          <rect x="34" y="84" width="212" height="46" rx="10" fill="#ffffff" stroke="#93c5fd" stroke-width="2"/>
+          <text x="86" y="112" text-anchor="middle" font-size="14" font-weight="800" fill="#0f172a">"user:3"</text>
+          <text x="185" y="112" text-anchor="middle" font-size="12" font-weight="700" fill="#2563eb">→ 상자3</text>
+
+          <rect x="34" y="144" width="212" height="46" rx="10" fill="#ffffff" stroke="#2563eb" stroke-width="2.5"/>
+          <text x="86" y="172" text-anchor="middle" font-size="14" font-weight="800" fill="#0f172a">"user:2"</text>
+          <text x="185" y="172" text-anchor="middle" font-size="12" font-weight="700" fill="#2563eb">→ 상자2</text>
+
+          <rect x="34" y="204" width="212" height="46" rx="10" fill="#ffffff" stroke="#93c5fd" stroke-width="2"/>
+          <text x="86" y="232" text-anchor="middle" font-size="14" font-weight="800" fill="#0f172a">"user:1"</text>
+          <text x="185" y="232" text-anchor="middle" font-size="12" font-weight="700" fill="#2563eb">→ 상자1</text>
+
+          <!-- 2. ENTRY BOXES (CENTER TOP) -->
+          <rect x="305" y="18" width="315" height="250" rx="16" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2.5"/>
+          <text x="462" y="46" text-anchor="middle" font-size="16" font-weight="800" fill="#5b21b6">2. Entry (보관 상자들)</text>
+          <text x="462" y="66" text-anchor="middle" font-size="12" fill="#7c3aed">값 · 만료시각 · 줄 위치가 함께 들어있음</text>
+
+          <!-- Entry 3 -->
+          <rect x="321" y="84" width="283" height="46" rx="10" fill="#ffffff" stroke="#c4b5fd" stroke-width="2"/>
+          <text x="378" y="112" text-anchor="middle" font-size="13" font-weight="800" fill="#0f172a">"Charlie"</text>
+          <text x="467" y="112" text-anchor="middle" font-size="12" fill="#64748b">exp: None</text>
+          <text x="556" y="112" text-anchor="middle" font-size="12" font-weight="700" fill="#059669">lru_node ●</text>
+
+          <!-- Entry 2 -->
+          <rect x="321" y="144" width="283" height="46" rx="10" fill="#ffffff" stroke="#7c3aed" stroke-width="2.5"/>
+          <text x="378" y="172" text-anchor="middle" font-size="13" font-weight="800" fill="#0f172a">"Bob"</text>
+          <text x="467" y="172" text-anchor="middle" font-size="12" font-weight="700" fill="#d97706">exp: 103초</text>
+          <text x="556" y="172" text-anchor="middle" font-size="12" font-weight="700" fill="#059669">lru_node ●</text>
+
+          <!-- Entry 1 -->
+          <rect x="321" y="204" width="283" height="46" rx="10" fill="#ffffff" stroke="#c4b5fd" stroke-width="2"/>
+          <text x="378" y="232" text-anchor="middle" font-size="13" font-weight="800" fill="#0f172a">"Alice"</text>
+          <text x="467" y="232" text-anchor="middle" font-size="12" fill="#64748b">exp: None</text>
+          <text x="556" y="232" text-anchor="middle" font-size="12" font-weight="700" fill="#059669">lru_node ●</text>
+
+          <!-- Arrows HashMap -> Entry -->
+          <line x1="246" y1="107" x2="313" y2="107" stroke="#2563eb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+          <line x1="246" y1="167" x2="313" y2="167" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+          <line x1="246" y1="227" x2="313" y2="227" stroke="#2563eb" stroke-width="2.2" marker-end="url(#arrowBlue)"/>
+
+          <!-- 3. MIN HEAP (RIGHT TOP) -->
+          <rect x="655" y="18" width="247" height="250" rx="16" fill="#fffbeb" stroke="#d97706" stroke-width="2.5"/>
+          <text x="778" y="46" text-anchor="middle" font-size="16" font-weight="800" fill="#92400e">3. Min Heap (유통기한 시계)</text>
+          <text x="778" y="66" text-anchor="middle" font-size="12" fill="#b45309">가장 빨리 끝나는 게 맨 꼭대기!</text>
+
+          <!-- Heap root -->
+          <rect x="698" y="88" width="160" height="48" rx="12" fill="#ffffff" stroke="#d97706" stroke-width="2.5"/>
+          <text x="778" y="109" text-anchor="middle" font-size="12" font-weight="800" fill="#b45309">가장 먼저 만료 (TOP)</text>
+          <text x="778" y="127" text-anchor="middle" font-size="13" font-weight="800" fill="#0f172a">(103초, "user:2")</text>
+
+          <!-- Heap children -->
+          <line x1="748" y1="136" x2="718" y2="178" stroke="#d97706" stroke-width="2"/>
+          <line x1="808" y1="136" x2="838" y2="178" stroke="#d97706" stroke-width="2"/>
+
+          <rect x="670" y="178" width="98" height="42" rx="10" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="719" y="204" text-anchor="middle" font-size="12" font-weight="700" fill="#78350f">(120초, ...)</text>
+
+          <rect x="788" y="178" width="98" height="42" rx="10" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="837" y="204" text-anchor="middle" font-size="12" font-weight="700" fill="#78350f">(150초, ...)</text>
+
+          <text x="778" y="248" text-anchor="middle" font-size="12" fill="#92400e">명령 전마다 맨 위만 쓱 확인!</text>
+
+          <!-- Arrow Entry 2 exp -> Min Heap -->
+          <path d="M 604 167 C 636 167, 648 112, 690 112" fill="none" stroke="#d97706" stroke-width="2.2" stroke-dasharray="5,4" marker-end="url(#arrowAmber)"/>
+
+          <!-- 4. DLL BOX (BOTTOM FULL WIDTH) -->
+          <rect x="18" y="302" width="884" height="150" rx="16" fill="#ecfdf5" stroke="#059669" stroke-width="2.5"/>
+          <text x="460" y="330" text-anchor="middle" font-size="16" font-weight="800" fill="#065f46">4. DLL · Doubly Linked List (최근 사용한 순서 줄 세우기)</text>
+
+          <!-- MRU Badge -->
+          <rect x="38" y="354" width="128" height="74" rx="12" fill="#059669"/>
+          <text x="102" y="384" text-anchor="middle" font-size="14" font-weight="800" fill="#ffffff">MRU (맨 앞)</text>
+          <text x="102" y="406" text-anchor="middle" font-size="11.5" fill="#d1fae5">방금 쓴 최신 키</text>
+
+          <!-- Node 3 -->
+          <rect x="206" y="354" width="145" height="74" rx="12" fill="#ffffff" stroke="#059669" stroke-width="2.2"/>
+          <text x="278" y="384" text-anchor="middle" font-size="15" font-weight="800" fill="#0f172a">Node: "user:3"</text>
+          <text x="278" y="408" text-anchor="middle" font-size="12" fill="#059669">prev ⇄ next</text>
+
+          <!-- Node 2 -->
+          <rect x="391" y="354" width="145" height="74" rx="12" fill="#ffffff" stroke="#059669" stroke-width="2.2"/>
+          <text x="463" y="384" text-anchor="middle" font-size="15" font-weight="800" fill="#0f172a">Node: "user:2"</text>
+          <text x="463" y="408" text-anchor="middle" font-size="12" fill="#059669">prev ⇄ next</text>
+
+          <!-- Node 1 -->
+          <rect x="576" y="354" width="145" height="74" rx="12" fill="#ffffff" stroke="#059669" stroke-width="2.2"/>
+          <text x="648" y="384" text-anchor="middle" font-size="15" font-weight="800" fill="#0f172a">Node: "user:1"</text>
+          <text x="648" y="408" text-anchor="middle" font-size="12" fill="#059669">prev ⇄ next</text>
+
+          <!-- LRU Badge -->
+          <rect x="758" y="354" width="128" height="74" rx="12" fill="#dc2626"/>
+          <text x="822" y="384" text-anchor="middle" font-size="14" font-weight="800" fill="#ffffff">LRU (맨 뒤)</text>
+          <text x="822" y="406" text-anchor="middle" font-size="11.5" fill="#fee2e2">꽉 차면 퇴출 1순위</text>
+
+          <!-- Bidirectional connectors -->
+          <text x="186" y="396" text-anchor="middle" font-size="18" font-weight="800" fill="#059669">⇄</text>
+          <text x="371" y="396" text-anchor="middle" font-size="18" font-weight="800" fill="#059669">⇄</text>
+          <text x="556" y="396" text-anchor="middle" font-size="18" font-weight="800" fill="#059669">⇄</text>
+          <text x="740" y="396" text-anchor="middle" font-size="18" font-weight="800" fill="#dc2626">⇄</text>
+
+          <!-- lru_node pointers from Entry down to DLL nodes -->
+          <path d="M 556 130 C 630 130, 635 280, 278 346" fill="none" stroke="#059669" stroke-width="1.8" stroke-dasharray="5,4" marker-end="url(#arrowGreen)"/>
+          <path d="M 556 190 C 556 260, 463 290, 463 346" fill="none" stroke="#059669" stroke-width="2.2" marker-end="url(#arrowGreen)"/>
+          <path d="M 556 250 C 590 278, 648 295, 648 346" fill="none" stroke="#059669" stroke-width="1.8" stroke-dasharray="5,4" marker-end="url(#arrowGreen)"/>
+        </svg>
+        <div class="diagram-caption">
+          초록 점선/실선이 바로 <code>Entry.lru_node</code>입니다! HashMap에서 Entry를 찾으면, DLL 줄에서 그 키가 어디 있는지 바로 점프할 수 있어요.
+        </div>
+      </div>
+    </section>
+
+    <!-- SEC 5: DLL, MRU, LRU -->
+    <section id="sec5" class="card">
+      <span class="sec-num">STEP 5 · DLL, MRU, LRU 낱낱이 이해하기</span>
+      <h2>줄 서기(DLL)와 <code>MRU</code> / <code>LRU</code>가 어떻게 움직이나요?</h2>
+      <p>
+        단어부터 풀고 갈게요. 겁먹을 것 하나도 없는 영어 줄임말입니다!
+      </p>
+      <ul>
+        <li><strong>DLL (Doubly Linked List · 이중 연결 리스트):</strong> 각 칸(노드)이 <strong>앞사람 주소(<code>prev</code>)</strong>와 <strong>뒷사람 주소(<code>next</code>)</strong>를 양손으로 잡고 서 있는 줄입니다.</li>
+        <li><strong>MRU (Most Recently Used):</strong> <em>“가장 최근에 사용됨”</em> → 방금 누가 찾았으니 <strong>줄 맨 앞</strong>으로 보냅니다.</li>
+        <li><strong>LRU (Least Recently Used):</strong> <em>“가장 오랫동안 안 쓰임”</em> → 아무도 안 찾아서 밀려난 <strong>줄 맨 뒤</strong>. 공간이 모자라면 여기서부터 내보냅니다.</li>
+      </ul>
+
+      <div class="callout purple">
+        <span class="callout-title">왜 굳이 양손(이중 연결 리스트)을 잡나요?</span>
+        줄 중간에 있던 <code>user:1</code>을 맨 앞(MRU)으로 옮기려면, 먼저 <code>user:1</code>을 줄에서 쏙 빼야 하죠?<br />
+        이때 <code>user:1</code>이 자기 앞사람(<code>prev</code>)과 뒷사람(<code>next</code>)을 알고 있으면, <strong>“내 앞사람과 뒷사람을 서로 손잡아 주기”</strong>만 하면 끝나요! 데이터가 100만 개 있어도 순식간(O(1))입니다.
+      </div>
+
+      <h3>실제 상황 그림: <code>GET user:1</code>을 실행하면 벌어지는 일</h3>
+      <div class="diagram-box">
+        <svg viewBox="0 0 860 270" width="860" height="270" aria-label="LRU에서 MRU로 이동하는 그림">
+          <defs>
+            <marker id="arrowJump" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L9,3 z" fill="#2563eb"/>
+            </marker>
+          </defs>
+
+          <!-- BEFORE -->
+          <text x="20" y="34" font-size="15" font-weight="800" fill="#475569">① 원래 줄 상태 (user:1이 맨 뒤 LRU에 있음)</text>
+          <rect x="20" y="50" width="90" height="50" rx="10" fill="#059669"/>
+          <text x="65" y="80" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">MRU 앞</text>
+
+          <rect x="135" y="50" width="130" height="50" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+          <text x="200" y="80" text-anchor="middle" font-size="14" font-weight="800" fill="#0f172a">user:3</text>
+
+          <rect x="295" y="50" width="130" height="50" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+          <text x="360" y="80" text-anchor="middle" font-size="14" font-weight="800" fill="#0f172a">user:2</text>
+
+          <rect x="455" y="50" width="130" height="50" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="3"/>
+          <text x="520" y="80" text-anchor="middle" font-size="14" font-weight="800" fill="#2563eb">user:1 (조회됨!)</text>
+
+          <rect x="610" y="50" width="90" height="50" rx="10" fill="#dc2626"/>
+          <text x="655" y="80" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">LRU 뒤</text>
+
+          <text x="122" y="80" text-anchor="middle" font-size="16" font-weight="800" fill="#64748b">⇄</text>
+          <text x="280" y="80" text-anchor="middle" font-size="16" font-weight="800" fill="#64748b">⇄</text>
+          <text x="440" y="80" text-anchor="middle" font-size="16" font-weight="800" fill="#64748b">⇄</text>
+          <text x="597" y="80" text-anchor="middle" font-size="16" font-weight="800" fill="#64748b">⇄</text>
+
+          <!-- Jump arc -->
+          <path d="M 520 100 C 520 148, 160 148, 160 175" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-dasharray="6,4" marker-end="url(#arrowJump)"/>
+          <rect x="245" y="118" width="210" height="26" rx="8" fill="#2563eb"/>
+          <text x="350" y="135" text-anchor="middle" font-size="12" font-weight="800" fill="#ffffff">move_to_front()로 맨 앞 이동!</text>
+
+          <!-- AFTER -->
+          <text x="20" y="172" font-size="15" font-weight="800" fill="#059669">② GET user:1 직후 (user:1이 맨 앞 MRU로, user:2가 맨 뒤 LRU로!)</text>
+          <rect x="20" y="190" width="90" height="50" rx="10" fill="#059669"/>
+          <text x="65" y="220" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">MRU 앞</text>
+
+          <rect x="135" y="190" width="130" height="50" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="3"/>
+          <text x="200" y="220" text-anchor="middle" font-size="14" font-weight="800" fill="#2563eb">user:1 (최신)</text>
+
+          <rect x="295" y="190" width="130" height="50" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+          <text x="360" y="220" text-anchor="middle" font-size="14" font-weight="800" fill="#0f172a">user:3</text>
+
+          <rect x="455" y="190" width="130" height="50" rx="10" fill="#fef2f2" stroke="#dc2626" stroke-width="2.5"/>
+          <text x="520" y="220" text-anchor="middle" font-size="14" font-weight="800" fill="#dc2626">user:2 (이제 뒤)</text>
+
+          <rect x="610" y="190" width="90" height="50" rx="10" fill="#dc2626"/>
+          <text x="655" y="220" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">LRU 뒤</text>
+
+          <text x="122" y="220" text-anchor="middle" font-size="16" font-weight="800" fill="#64748b">⇄</text>
+          <text x="280" y="220" text-anchor="middle" font-size="16" font-weight="800" fill="#64748b">⇄</text>
+          <text x="440" y="220" text-anchor="middle" font-size="16" font-weight="800" fill="#64748b">⇄</text>
+          <text x="597" y="220" text-anchor="middle" font-size="16" font-weight="800" fill="#64748b">⇄</text>
+        </svg>
+        <div class="diagram-caption">
+          방금 조회한 <code>user:1</code>은 맨 앞(MRU)으로 살아남고, 대신 아무도 안 찾은 <code>user:2</code>가 맨 뒤(LRU)가 되었습니다.
+        </div>
+      </div>
+    </section>
+
+    <!-- SEC 6: MIN HEAP & EXPIRE_AT -->
+    <section id="sec6" class="card">
+      <span class="sec-num">STEP 6 · Min Heap과 expire_at</span>
+      <h2>유통기한 감시: <code>Min Heap</code>과 <code>expire_at</code></h2>
+      <p>
+        어떤 키에는 <code>EXPIRE user:2 3</code>처럼 <strong>“3초 뒤 자동으로 없어져라”</strong>라는 유통기한을 걸 수 있습니다.
+      </p>
+      <p>
+        이때 현재 시각이 <code>100초</code>라면, 상자(<code>Entry</code>) 안의 <code>expire_at</code> 칸에 <code>103초</code>라고 적어두고,
+        <strong>Min Heap(최소 힙)</strong>이라는 피라미드에 <code>(103초, "user:2")</code>를 넣어둡니다.
+      </p>
+
+      <div class="diagram-box">
+        <svg viewBox="0 0 820 245" width="820" height="245" aria-label="Min Heap 유통기한 피라미드">
+          <!-- Top node -->
+          <rect x="295" y="18" width="230" height="58" rx="14" fill="#fffbeb" stroke="#d97706" stroke-width="3"/>
+          <text x="410" y="42" text-anchor="middle" font-size="12" font-weight="800" fill="#b45309">맨 꼭대기 · 가장 빨리 만료!</text>
+          <text x="410" y="64" text-anchor="middle" font-size="15" font-weight="800" fill="#0f172a">(expire_at = 103초, "user:2")</text>
+
+          <!-- Lines -->
+          <line x1="360" y1="76" x2="230" y2="132" stroke="#d97706" stroke-width="2.2"/>
+          <line x1="460" y1="76" x2="590" y2="132" stroke="#d97706" stroke-width="2.2"/>
+
+          <!-- Left child -->
+          <rect x="110" y="132" width="240" height="52" rx="12" fill="#ffffff" stroke="#fcd34d" stroke-width="2"/>
+          <text x="230" y="155" text-anchor="middle" font-size="12" fill="#78350f">그다음 만료</text>
+          <text x="230" y="174" text-anchor="middle" font-size="14" font-weight="700" fill="#0f172a">(expire_at = 115초, "session:A")</text>
+
+          <!-- Right child -->
+          <rect x="470" y="132" width="240" height="52" rx="12" fill="#ffffff" stroke="#fcd34d" stroke-width="2"/>
+          <text x="590" y="155" text-anchor="middle" font-size="12" fill="#78350f">더 늦은 만료</text>
+          <text x="590" y="174" text-anchor="middle" font-size="14" font-weight="700" fill="#0f172a">(expire_at = 140초, "token:9")</text>
+
+          <!-- Note -->
+          <rect x="150" y="200" width="520" height="32" rx="8" fill="#fef3c7"/>
+          <text x="410" y="221" text-anchor="middle" font-size="13" font-weight="700" fill="#92400e">
+            지금 시계가 104초가 되면? → 맨 꼭대기(103초)만 보고 “만료됐네!” 하며 바로 삭제!
+          </text>
+        </svg>
+      </div>
+
+      <div class="callout amber">
+        <span class="callout-title">왜 Min Heap이 편한가요?</span>
+        만료 시간이 걸린 키가 1만 개 있어도 전부 뒤질 필요가 없어요.<br />
+        항상 <strong>맨 꼭대기(<code>peek()</code>) 하나</strong>만 쳐다보고 “지금 시간보다 작아졌으면 버리고, 아직 안 됐으면 나머지 9,999개도 아직 멀었구나!” 하고 넘어가면 됩니다.
+      </div>
+    </section>
+
+    <!-- SEC 7: INTERACTIVE SIMULATOR -->
+    <section id="sec7" class="card">
+      <span class="sec-num">STEP 7 · 직접 눌러보며 이해하기</span>
+      <h2>과제 예시 그대로! 한 단계씩 움직여 보기</h2>
+      <p>
+        <code>instruction.md</code> 맨 아래에 있는 실행 예시를 그대로 옮겨왔습니다. 버튼을 1단계부터 순서대로 눌러보세요.
+      </p>
+
+      <div class="sim-controls" id="sim-buttons">
+        <button class="sim-btn active" onclick="setStep(0)">1. maxmemory 30 설정</button>
+        <button class="sim-btn" onclick="setStep(1)">2. SET user:1 "Alice"</button>
+        <button class="sim-btn" onclick="setStep(2)">3. SET user:2 "Bob"</button>
+        <button class="sim-btn" onclick="setStep(3)">4. SET user:3 "Charlie" (초과!)</button>
+        <button class="sim-btn" onclick="setStep(4)">5. EXPIRE user:2 3</button>
+        <button class="sim-btn" onclick="setStep(5)">6. 3초 후 GET user:2</button>
+      </div>
+
+      <div class="sim-stage">
+        <div class="sim-header">
+          <div>
+            <span style="font-size:13px; color:var(--muted); display:block;">입력한 명령어</span>
+            <span class="sim-cmd" id="sim-cmd"></span>
+          </div>
+          <div class="sim-mem" id="sim-mem"></div>
+        </div>
+
+        <div class="sim-panels">
+          <div class="sim-panel">
+            <h5>1. HashMap (저장된 키 → Entry)</h5>
+            <div id="sim-hashmap"></div>
+          </div>
+          <div class="sim-panel">
+            <h5>2. DLL (MRU 앞 ⇄ 뒤 LRU)</h5>
+            <div id="sim-dll"></div>
+          </div>
+          <div class="sim-panel">
+            <h5>3. Min Heap (유통기한 시계)</h5>
+            <div id="sim-heap"></div>
+          </div>
+        </div>
+
+        <div class="sim-explain" id="sim-explain"></div>
+      </div>
+    </section>
+
+    <!-- SEC 8: COMMANDS -->
+    <section id="sec8" class="card">
+      <span class="sec-num">STEP 8 · 명령어 사전</span>
+      <h2><code>SET</code>, <code>GET</code>, <code>DEL</code>… 다 처음 봐도 괜찮아요!</h2>
+      <p>
+        명령어가 많아 보여도, 결국 <strong>“넣고, 꺼내고, 지우고, 몇 개인지 세고, 유통기한 거는 것”</strong> 딱 10개뿐입니다. 하나씩 순서대로 만들어 가면 됩니다.
+      </p>
+
+      <h3>① 기본 데이터 명령어 (6개)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>명령어</th>
+            <th>우리말 뜻</th>
+            <th>예시와 결과</th>
+            <th>내부에서 무슨 일이?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>SET key value</code></td>
+            <td>저장하기 (덮어쓰기)</td>
+            <td><code>SET user:1 "Alice"</code> → <code>OK</code></td>
+            <td>HashMap에 <code>Entry</code> 저장 + DLL 맨 앞(MRU)으로 이동 + 메모리 넘치면 LRU 제거</td>
+          </tr>
+          <tr>
+            <td><code>GET key</code></td>
+            <td>꺼내 보기 (조회)</td>
+            <td><code>GET user:1</code> → <code>"Alice"</code><br />(없으면 <code>(nil)</code>)</td>
+            <td>HashMap에서 찾기 → 있으면 값 보여주고 DLL 맨 앞(MRU)으로 이동</td>
+          </tr>
+          <tr>
+            <td><code>DEL key</code></td>
+            <td>삭제하기</td>
+            <td><code>DEL user:1</code> → <code>(integer) 1</code><br />(원래 없으면 <code>0</code>)</td>
+            <td>HashMap과 DLL에서 모두 지우고 사용 메모리에서 빼기</td>
+          </tr>
+          <tr>
+            <td><code>EXISTS key</code></td>
+            <td>있는지 확인하기</td>
+            <td><code>EXISTS user:1</code> → <code>1</code> 또는 <code>0</code></td>
+            <td>만료 안 된 키가 HashMap에 살아있으면 <code>1</code>, 없으면 <code>0</code></td>
+          </tr>
+          <tr>
+            <td><code>DBSIZE</code></td>
+            <td>총 몇 개 있나?</td>
+            <td><code>DBSIZE</code> → <code>(integer) 2</code></td>
+            <td>만료된 키를 먼저 정리한 뒤, 현재 남아 있는 키 개수 세기</td>
+          </tr>
+          <tr>
+            <td><code>KEYS</code></td>
+            <td>전체 이름표 목록</td>
+            <td><code>KEYS</code> → <code>1. "user:2"</code>, <code>2. "user:3"</code></td>
+            <td>현재 살아 있는 모든 키 이름 보여주기 (순서 상관없음)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>② 메모리 관리 명령어 (2개)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>명령어</th>
+            <th>우리말 뜻</th>
+            <th>예시와 결과</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>CONFIG SET maxmemory 숫자</code></td>
+            <td>최대 메모리 용량 정하기 (바이트)</td>
+            <td><code>CONFIG SET maxmemory 30</code> → <code>OK</code> (0이면 무제한)</td>
+          </tr>
+          <tr>
+            <td><code>INFO memory</code></td>
+            <td>메모리 성적표 보기</td>
+            <td><code>used_memory:22</code> / <code>maxmemory:30</code> / <code>evicted_keys:1</code>(쫓겨난 수)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>③ 유통기한(TTL) 명령어 (2개)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>명령어</th>
+            <th>우리말 뜻</th>
+            <th>결과 숫자 의미</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>EXPIRE key 초</code></td>
+            <td>“몇 초 뒤에 자동 삭제해줘”</td>
+            <td>성공하면 <code>(integer) 1</code>, 없는 키면 <code>(integer) 0</code></td>
+          </tr>
+          <tr>
+            <td><code>TTL key</code></td>
+            <td>“얼마나 남았어?” (Time To Live)</td>
+            <td>
+              <strong>양수(예: <code>2</code>):</strong> 2초 남음<br />
+              <strong><code>-1</code>:</strong> 키는 있는데 유통기한을 안 걸었음(영구)<br />
+              <strong><code>-2</code>:</strong> 그런 키가 없음 (또는 이미 만료돼서 사라짐)
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- SEC 9: UNITTEST & ROADMAP -->
+    <section id="sec9" class="card">
+      <span class="sec-num">STEP 9 · unittest와 차근차근 로드맵</span>
+      <h2><code>unittest</code>는 어렵지 않아요! “자동 확인 버튼”이에요</h2>
+      <p>
+        코드가 조금만 길어져도 수정할 때마다 직접 <code>SET</code>, <code>GET</code>을 손으로 쳐서 확인하기는 힘듭니다.
+        파이썬에 기본으로 들어 있는 <strong><code>unittest</code></strong>는 내가 미리 적어둔 확인 목록을 버튼 한 번(<code>py -m unittest</code>)으로 대신 검사해주는 도구입니다.
+      </p>
+
+      <pre># 예: "1을 넣고 2를 넣으면, 꺼낼 때 제대로 나오는지" 자동 검사하기
+import unittest
+
+class TestSimple(unittest.TestCase):
+    def test_add(self):
+        result = 1 + 2
+        self.assertEqual(result, 3)  # "result가 3과 같아야 통과!"
+
+# 터미널에서 실행: py -m unittest</pre>
+
+      <h3>우리가 앞으로 밟아갈 아주 쉬운 순서</h3>
+      <p>한 번에 다 이해하고 짜려 하지 말고, <strong>레고 블록 1개씩 만들고 검사하면서</strong> 올라가면 됩니다.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>순서</th>
+            <th>무엇을 만드나요?</th>
+            <th>완료 기준 (쉽게 말하면)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>1단계</strong></td>
+            <td>폴더 만들기 + <code>unittest</code> 실행해보기</td>
+            <td>가짜 테스트 1개가 <code>OK</code>로 통과하면 끝!</td>
+          </tr>
+          <tr>
+            <td><strong>2단계</strong></td>
+            <td><strong>DLL</strong> (줄 세우기 부품)</td>
+            <td>맨 앞 추가, 맨 뒤 삭제, 중간에서 맨 앞으로 이동이 잘 되는지 테스트</td>
+          </tr>
+          <tr>
+            <td><strong>3단계</strong></td>
+            <td><strong>HashMap</strong> (목차 부품)</td>
+            <td><code>put</code>, <code>get</code>, <code>remove</code>가 잘 되고, 칸이 차면 2배로 커지는지 테스트</td>
+          </tr>
+          <tr>
+            <td><strong>4단계</strong></td>
+            <td><strong>Min Heap</strong> (알람시계 부품)</td>
+            <td>숫자를 아무 순서로 넣어도 <code>pop</code>할 때 작은 숫자부터 나오는지 테스트</td>
+          </tr>
+          <tr>
+            <td><strong>5단계</strong></td>
+            <td><strong>Store</strong> (3개 부품 합체!)</td>
+            <td><code>SET</code>, <code>GET</code>, <code>DEL</code>, <code>EXISTS</code>, <code>DBSIZE</code>, <code>KEYS</code> + LRU + 메모리 계산 연결</td>
+          </tr>
+          <tr>
+            <td><strong>6단계</strong></td>
+            <td><strong>TTL</strong> (유통기한 연결)</td>
+            <td>가짜 시계로 시간을 3초 앞으로 돌렸을 때 <code>user:2</code>가 사라지는지 확인</td>
+          </tr>
+          <tr>
+            <td><strong>7단계</strong></td>
+            <td><strong>CLI</strong> (<code>mini-redis&gt;</code> 입력창)</td>
+            <td>키보드로 명령어를 입력하면 Redis처럼 <code>OK</code>, <code>(nil)</code>이 출력되게 완성!</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout green">
+        <span class="callout-title">지금 당장 할 수 있는 가장 작은 첫 걸음</span>
+        이 그림으로 큰 흐름이 잡혔다면, 다음은 왼쪽이나 오른쪽 에이전트에게 <strong>“1단계: 빈 폴더랑 <code>unittest</code> 예제 1개만 먼저 같이 만들어보고 실행해 보자”</strong>라고 하시면 아주 가볍게 시작할 수 있습니다!
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    const STEPS = [
+      {
+        cmd: 'CONFIG SET maxmemory 30',
+        mem: '사용량: 0 / 30 bytes · 쫓겨남(evicted): 0',
+        hashmap: '<span style="color:#64748b; font-size:13.5px;">아직 비어 있음</span>',
+        dll: '<span style="color:#64748b; font-size:13.5px;">아직 비어 있음</span>',
+        heap: '<span style="color:#64748b; font-size:13.5px;">만료 예약 없음</span>',
+        explain: '<strong>해설:</strong> “우리 사물함 전체 크기는 <strong>최대 30바이트까지만</strong> 쓸 수 있어!”라고 규칙을 정했습니다. 결과로 <code>OK</code>가 나옵니다.'
+      },
+      {
+        cmd: 'SET user:1 "Alice"',
+        mem: '사용량: 11 / 30 bytes · 쫓겨남: 0',
+        hashmap: '<span class="pill pill-blue">"user:1" → Entry("Alice")</span>',
+        dll: '<span class="pill pill-green">MRU [user:1] LRU</span>',
+        heap: '<span style="color:#64748b; font-size:13.5px;">만료 예약 없음</span>',
+        explain: '<strong>해설:</strong> <code>user:1</code>(6바이트) + <code>Alice</code>(5바이트) = <strong>11바이트</strong>! 따옴표 <code>""</code>는 빼고 계산합니다. 아직 30보다 작으니 안전하게 저장됩니다.'
+      },
+      {
+        cmd: 'SET user:2 "Bob"',
+        mem: '사용량: 20 / 30 bytes · 쫓겨남: 0',
+        hashmap: '<span class="pill pill-blue">"user:1" → Entry("Alice")</span><span class="pill pill-blue">"user:2" → Entry("Bob")</span>',
+        dll: '<span class="pill pill-green">MRU: user:2</span><span class="arrow-inline">⇄</span><span class="pill pill-amber">LRU: user:1</span>',
+        heap: '<span style="color:#64748b; font-size:13.5px;">만료 예약 없음</span>',
+        explain: '<strong>해설:</strong> <code>user:2</code>(6) + <code>Bob</code>(3) = 9바이트 추가! 총 <strong>20바이트</strong>. 방금 넣은 <code>user:2</code>가 <strong>맨 앞(MRU)</strong>에 서고, <code>user:1</code>이 뒤(LRU)로 밀렸습니다.'
+      },
+      {
+        cmd: 'SET user:3 "Charlie"',
+        mem: '사용량: 22 / 30 bytes · 쫓겨남: 1',
+        hashmap: '<span class="pill pill-red">"user:1" (삭제됨)</span><span class="pill pill-blue">"user:2" → Entry("Bob")</span><span class="pill pill-blue">"user:3" → Entry("Charlie")</span>',
+        dll: '<span class="pill pill-green">MRU: user:3</span><span class="arrow-inline">⇄</span><span class="pill pill-amber">LRU: user:2</span>',
+        heap: '<span style="color:#64748b; font-size:13.5px;">만료 예약 없음</span>',
+        explain: '<strong>해설:</strong> <code>user:3</code>(6) + <code>Charlie</code>(7) = 13바이트 추가 → 잠깐 20 + 13 = <strong>33바이트</strong>로 제한(30) 초과! 그래서 <strong>줄 맨 뒤(LRU)에 있던 <code>user:1</code>(11바이트)이 쫓겨납니다!</strong> 33 - 11 = <strong>22바이트</strong>가 남습니다.'
+      },
+      {
+        cmd: 'EXPIRE user:2 3',
+        mem: '사용량: 22 / 30 bytes · 쫓겨남: 1',
+        hashmap: '<span class="pill pill-blue">"user:2" → Entry("Bob", exp:+3초)</span><span class="pill pill-blue">"user:3" → Entry("Charlie")</span>',
+        dll: '<span class="pill pill-green">MRU: user:3</span><span class="arrow-inline">⇄</span><span class="pill pill-amber">LRU: user:2</span>',
+        heap: '<span class="pill pill-amber">TOP: (+3초 뒤, "user:2")</span>',
+        explain: '<strong>해설:</strong> <code>user:2</code> 상자에 <strong>“3초 뒤 만료(expire_at)”</strong>를 적고, <strong>Min Heap</strong> 맨 꼭대기에 올려두었습니다. (참고: <code>EXPIRE</code>는 DLL 줄 순서를 바꾸지 않아요!)'
+      },
+      {
+        cmd: '(3초 경과 후) GET user:2',
+        mem: '사용량: 13 / 30 bytes · 쫓겨남: 1',
+        hashmap: '<span class="pill pill-red">"user:2" (만료 삭제)</span><span class="pill pill-blue">"user:3" → Entry("Charlie")</span>',
+        dll: '<span class="pill pill-green">MRU [user:3] LRU</span>',
+        heap: '<span style="color:#64748b; font-size:13.5px;">만료 항목 꺼내서 지움 (비어 있음)</span>',
+        explain: '<strong>해설:</strong> 3초가 지나 <code>GET user:2</code>를 실행하기 직전, Min Heap 맨 위를 확인하니 만료 시간이 지났어요! 그래서 <code>user:2</code>를 모든 곳에서 깨끗이 지우고, 결과로 <code>(nil)</code>(없음)을 돌려줍니다.'
+      }
+    ];
+
+    function setStep(idx) {
+      const s = STEPS[idx];
+      document.getElementById('sim-cmd').textContent = s.cmd;
+      document.getElementById('sim-mem').textContent = s.mem;
+      document.getElementById('sim-hashmap').innerHTML = s.hashmap;
+      document.getElementById('sim-dll').innerHTML = s.dll;
+      document.getElementById('sim-heap').innerHTML = s.heap;
+      document.getElementById('sim-explain').innerHTML = s.explain;
+
+      const btns = document.querySelectorAll('#sim-buttons .sim-btn');
+      btns.forEach((b, i) => {
+        b.classList.toggle('active', i === idx);
+      });
+    }
+
+    setStep(0);
+  </script>
+</body>
+</html>
