@@ -1,7 +1,7 @@
 """
 b51-coder pane의 transcript.jsonl을 모니터링하여,
 새로운 학습 질문/답변이 감지되면 자동으로 study/docs/에 문서를 생성하고,
-'질문마다 1개씩' git commit을 자동으로 수행하는 데몬.
+'질문마다 1개씩' git commit & push를 자동으로 수행하는 데몬.
 LLM API를 호출하지 않는 순수 로컬 파이썬 프로세스이므로 토큰 소모가 0개입니다.
 """
 
@@ -41,7 +41,7 @@ def load_cursor():
                 return json.load(f)
         except Exception:
             pass
-    return {"last_step_index": 19, "next_doc_number": 12}
+    return {"last_step_index": 146, "next_doc_number": 15}
 
 
 def save_cursor(cursor):
@@ -71,8 +71,8 @@ def is_learning_question(text):
         if re.search(pat, text_lower):
             return False
 
-    question_hints = ["왜", "무슨", "어떻게", "뭐지", "어떤", "이유", "차이", "?", "궁금", "설명", "의미"]
-    return any(q in text_lower for q in question_hints) or len(text) > 40
+    question_hints = ["왜", "무슨", "어떻게", "뭐지", "어떤", "이유", "차이", "?", "궁금", "설명", "의미", "어원", "강제력", "약속"]
+    return any(q in text_lower for q in question_hints) or len(text) > 35
 
 
 def make_slug(question_text):
@@ -85,29 +85,36 @@ def make_slug(question_text):
 
 def git_commit_doc(filename, doc_id_str, title_text):
     """study 브랜치에 질문 문서 단위로 커밋 및 push를 수행한다."""
+    rel_path = f"docs/{filename}"
     try:
         subprocess.run(
-            ["git", "-C", SCRIPT_DIR, "add", os.path.join("docs", filename)],
+            ["git", "-C", SCRIPT_DIR, "add", "-f", rel_path],
             capture_output=True,
             check=True,
+            encoding="utf-8",
         )
-        commit_msg = f"docs: {doc_id_str} {title_text[:40]}"
+        clean_title = re.sub(r"[\r\n\"]+", " ", title_text).strip()
+        commit_msg = f"docs: {doc_id_str} {clean_title[:45]}"
         subprocess.run(
             ["git", "-C", SCRIPT_DIR, "commit", "-m", commit_msg],
             capture_output=True,
             check=True,
+            encoding="utf-8",
         )
         print(f"[Watcher] Git 커밋 완료: {commit_msg}", flush=True)
 
-        # origin/study로 자동 push
         subprocess.run(
             ["git", "-C", SCRIPT_DIR, "push", "origin", "study"],
             capture_output=True,
             check=True,
+            encoding="utf-8",
+            timeout=30,
         )
         print(f"[Watcher] Git Push 완료: origin/study", flush=True)
+    except subprocess.CalledProcessError as e:
+        print(f"[Watcher Git Error] {e.stderr or e.stdout}", flush=True)
     except Exception as e:
-        print(f"[Watcher Git Error] {e}", flush=True)
+        print(f"[Watcher Error] {e}", flush=True)
 
 
 def process_new_steps():
@@ -131,8 +138,8 @@ def process_new_steps():
         return
 
     cursor = load_cursor()
-    last_idx = cursor.get("last_step_index", 19)
-    next_num = cursor.get("next_doc_number", 12)
+    last_idx = cursor.get("last_step_index", 146)
+    next_num = cursor.get("next_doc_number", 15)
 
     steps = []
     with open(transcript_path, "r", encoding="utf-8") as f:
@@ -182,7 +189,7 @@ def process_new_steps():
                 with open(filepath, "w", encoding="utf-8") as out_f:
                     out_f.write(doc_content)
 
-                print(f"[Watcher] 새 문서 생성: {filename}")
+                print(f"[Watcher] 새 문서 생성: {filename}", flush=True)
                 git_commit_doc(filename, doc_id_str, current_user_q)
 
                 next_num += 1
@@ -195,7 +202,7 @@ def process_new_steps():
 
 
 def main():
-    print("[Watcher] b51-coder 질답 자동 문서화 + 질문별 자동 커밋 시작 (15초 주기, 0토큰)...", flush=True)
+    print("[Watcher] b51-coder 질답 자동 문서화 + 질문별 자동 커밋/Push 시작 (15초 주기, 0토큰)...", flush=True)
     while True:
         try:
             process_new_steps()
