@@ -21,7 +21,7 @@ def _backward_data(lst):
 
 
 class TestDoublyLinkedList(unittest.TestCase):
-    """이중 연결 리스트의 기본 구조와 순회 동작을 검증한다."""
+    """이중 연결 리스트의 기본 삽입, 삭제, 이동(O(1)) 동작을 검증한다."""
 
     def test_empty_list(self):
         lst = DoublyLinkedList()
@@ -74,6 +74,51 @@ class TestDoublyLinkedList(unittest.TestCase):
         self.assertEqual(lst.size(), 1)
         self.assertEqual(_forward_data(lst), ["B"])
         self.assertEqual(_backward_data(lst), ["B"])
+
+    def test_remove_middle_node(self):
+        lst = DoublyLinkedList()
+        lst.insert_back("A")
+        mid = lst.insert_back("B")
+        lst.insert_back("C")
+
+        removed = lst.remove_node(mid)
+        self.assertIs(removed, mid)
+        self.assertEqual(lst.size(), 2)
+        self.assertEqual(_forward_data(lst), ["A", "C"])
+        self.assertEqual(_backward_data(lst), ["C", "A"])
+
+    def test_remove_only_node(self):
+        lst = DoublyLinkedList()
+        only = lst.insert_back("A")
+
+        lst.remove_node(only)
+        self.assertEqual(lst.size(), 0)
+        self.assertEqual(_forward_data(lst), [])
+        self.assertEqual(_backward_data(lst), [])
+        self.assertIsNone(lst.remove_front())
+        self.assertIsNone(lst.remove_back())
+
+    def test_move_to_front_from_back(self):
+        lst = DoublyLinkedList()
+        lst.insert_back("A")
+        lst.insert_back("B")
+        tail_node = lst.insert_back("C")
+
+        lst.move_to_front(tail_node)
+        self.assertEqual(lst.size(), 3)
+        self.assertEqual(_forward_data(lst), ["C", "A", "B"])
+        self.assertEqual(_backward_data(lst), ["B", "A", "C"])
+
+    def test_move_to_front_when_already_front(self):
+        lst = DoublyLinkedList()
+        front_node = lst.insert_back("A")
+        lst.insert_back("B")
+        lst.insert_back("C")
+
+        lst.move_to_front(front_node)
+        self.assertEqual(lst.size(), 3)
+        self.assertEqual(_forward_data(lst), ["A", "B", "C"])
+        self.assertEqual(_backward_data(lst), ["C", "B", "A"])
 
 
 if __name__ == "__main__":

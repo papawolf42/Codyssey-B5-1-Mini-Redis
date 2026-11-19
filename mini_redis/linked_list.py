@@ -84,6 +84,26 @@ class DoublyLinkedList:
         self._unlink(node)
         return node
 
+    def _is_linked_node(self, node):
+        """더미가 아니고 현재 리스트에 연결된 노드인지 확인한다."""
+        if node is None or node is self._head or node is self._tail:
+            return False
+        return node.prev is not None and node.next is not None
+
+    def remove_node(self, node):
+        """주어진 노드를 즉시 제거한다. prev/next를 직접 알고 있어 O(1)."""
+        if not self._is_linked_node(node):
+            return None
+        self._unlink(node)
+        return node
+
+    def move_to_front(self, node):
+        """주어진 노드를 맨 앞으로 옮긴다. unlink 후 head 뒤 연결로 O(1)."""
+        if not self._is_linked_node(node) or self._head.next is node:
+            return
+        self._unlink(node)
+        self._link_front(node)
+
     def size(self):
         """현재 저장된 노드 개수를 정수로 반환한다. (O(1))"""
         return self._size
