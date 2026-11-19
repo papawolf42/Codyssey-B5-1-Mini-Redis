@@ -41,7 +41,7 @@ def load_cursor():
                 return json.load(f)
         except Exception:
             pass
-    return {"last_step_index": 146, "next_doc_number": 15}
+    return {"last_step_index": 181, "next_doc_number": 18}
 
 
 def save_cursor(cursor):
@@ -66,12 +66,19 @@ def is_learning_question(text):
         r"^py\s+",
         r"커밋하고\s*다음",
         r"다음\s*구현으로",
+        r"커밋메시지",
+        r"커밋할까",
+        r"1번\s*갑시다",
+        r"2번\s*갑시다",
     ]
     for pat in ignore_patterns:
         if re.search(pat, text_lower):
             return False
 
-    question_hints = ["왜", "무슨", "어떻게", "뭐지", "어떤", "이유", "차이", "?", "궁금", "설명", "의미", "어원", "강제력", "약속"]
+    question_hints = [
+        "왜", "무슨", "어떻게", "뭐지", "어떤", "이유", "차이", "?", "궁금", "설명",
+        "의미", "어원", "강제력", "약속", "필드", "안낫나", "안되나", "맞추면",
+    ]
     return any(q in text_lower for q in question_hints) or len(text) > 35
 
 
@@ -138,8 +145,8 @@ def process_new_steps():
         return
 
     cursor = load_cursor()
-    last_idx = cursor.get("last_step_index", 146)
-    next_num = cursor.get("next_doc_number", 15)
+    last_idx = cursor.get("last_step_index", 181)
+    next_num = cursor.get("next_doc_number", 18)
 
     steps = []
     with open(transcript_path, "r", encoding="utf-8") as f:
@@ -154,15 +161,12 @@ def process_new_steps():
                 continue
 
     current_user_q = None
-    max_seen_idx = last_idx
+    last_safe_idx = last_idx
 
     for step in steps:
         idx = step.get("step_index", -1)
         if idx <= last_idx:
             continue
-
-        if idx > max_seen_idx:
-            max_seen_idx = idx
 
         stype = step.get("type")
         content = step.get("content", "")
@@ -171,32 +175,43 @@ def process_new_steps():
             req_text = clean_user_request(content)
             if is_learning_question(req_text):
                 current_user_q = req_text
+                # 학습 질문이 시작되었으므로, 답변이 완결되기 전까지는 커서를 전진시키지 않음
             else:
                 current_user_q = None
+                # 단순 진행/커밋 명령 등은 안전하게 통과 처리
+                last_safe_idx = idx
 
-        elif stype == "PLANNER_RESPONSE" and current_user_q:
-            resp_text = content.strip()
-            if resp_text and len(resp_text) > 50:
-                doc_id_str = f"{next_num:04d}"
-                slug = make_slug(current_user_q)
-                filename = f"{doc_id_str}-{slug}.md"
-                filepath = os.path.join(DOCS_DIR, filename)
+        elif stype == "PLANNER_RESPONSE":
+            if current_user_q:
+                resp_text = content.strip()
+                if resp_text and len(resp_text) > 50:
+                    doc_id_str = f"{next_num:04d}"
+                    slug = make_slug(current_user_q)
+                    filename = f"{doc_id_str}-{slug}.md"
+                    filepath = os.path.join(DOCS_DIR, filename)
 
-                doc_content = f"# {doc_id_str} · {current_user_q[:50]}\n\n"
-                doc_content += f"## Q. {current_user_q}\n\n---\n\n"
-                doc_content += f"{resp_text}\n"
+                    doc_content = f"# {doc_id_str} · {current_user_q[:50]}\n\n"
+                    doc_content += f"## Q. {current_user_q}\n\n---\n\n"
+                    doc_content += f"{resp_text}\n"
 
-                with open(filepath, "w", encoding="utf-8") as out_f:
-                    out_f.write(doc_content)
+                    with open(filepath, "w", encoding="utf-8") as out_f:
+                        out_f.write(doc_content)
 
-                print(f"[Watcher] 새 문서 생성: {filename}", flush=True)
-                git_commit_doc(filename, doc_id_str, current_user_q)
+                    print(f"[Watcher] 새 문서 생성: {filename}", flush=True)
+                    git_commit_doc(filename, doc_id_str, current_user_q)
 
-                next_num += 1
-                current_user_q = None
+                    next_num += 1
+                    current_user_q = None
+                    last_safe_idx = idx  # 답변까지 성공적으로 저장되었으므로 안전 인덱스 갱신
+            else:
+                last_safe_idx = idx
 
-    if max_seen_idx > last_idx:
-        cursor["last_step_index"] = max_seen_idx
+        elif stype in ("GENERIC", "SYSTEM_MESSAGE"):
+            if not current_user_q:
+                last_safe_idx = idx
+
+    if last_safe_idx > last_idx:
+        cursor["last_step_index"] = last_safe_idx
         cursor["next_doc_number"] = next_num
         save_cursor(cursor)
 
