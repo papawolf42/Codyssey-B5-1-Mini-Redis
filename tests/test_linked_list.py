@@ -29,6 +29,29 @@ class TestDoublyLinkedList(unittest.TestCase):
         self.assertEqual(_forward_data(lst), [])
         self.assertEqual(_backward_data(lst), [])
 
+    def test_insert_front_order_and_returns_node(self):
+        lst = DoublyLinkedList()
+        n1 = lst.insert_front("A")
+        n2 = lst.insert_front("B")
+        n3 = lst.insert_front("C")
+
+        self.assertEqual(n1.data, "A")
+        self.assertEqual(n2.data, "B")
+        self.assertEqual(n3.data, "C")
+        self.assertEqual(lst.size(), 3)
+        self.assertEqual(_forward_data(lst), ["C", "B", "A"])
+        self.assertEqual(_backward_data(lst), ["A", "B", "C"])
+
+    def test_insert_back_order(self):
+        lst = DoublyLinkedList()
+        lst.insert_back("A")
+        lst.insert_back("B")
+        lst.insert_back("C")
+
+        self.assertEqual(lst.size(), 3)
+        self.assertEqual(_forward_data(lst), ["A", "B", "C"])
+        self.assertEqual(_backward_data(lst), ["C", "B", "A"])
+
 
 if __name__ == "__main__":
     unittest.main()

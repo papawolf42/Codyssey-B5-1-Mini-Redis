@@ -30,6 +30,36 @@ class DoublyLinkedList:
         self._tail.prev = self._head
         self._size = 0
 
+    def _link_front(self, node):
+        """더미 head 바로 뒤에 node를 연결한다. 포인터 4개만 바꿔 O(1)."""
+        next_node = self._head.next
+        node.prev = self._head
+        node.next = next_node
+        self._head.next = node
+        next_node.prev = node
+        self._size += 1
+
+    def _link_back(self, node):
+        """더미 tail 바로 앞에 node를 연결한다. 포인터 4개만 바꿔 O(1)."""
+        prev_node = self._tail.prev
+        node.prev = prev_node
+        node.next = self._tail
+        prev_node.next = node
+        self._tail.prev = node
+        self._size += 1
+
+    def insert_front(self, data):
+        """맨 앞에 data를 담은 노드를 추가하고 해당 Node를 반환한다. (O(1))"""
+        node = Node(data)
+        self._link_front(node)
+        return node
+
+    def insert_back(self, data):
+        """맨 뒤에 data를 담은 노드를 추가하고 해당 Node를 반환한다. (O(1))"""
+        node = Node(data)
+        self._link_back(node)
+        return node
+
     def size(self):
         """현재 저장된 노드 개수를 정수로 반환한다. (O(1))"""
         return self._size
