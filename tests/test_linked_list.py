@@ -26,6 +26,8 @@ class TestDoublyLinkedList(unittest.TestCase):
     def test_empty_list(self):
         lst = DoublyLinkedList()
         self.assertEqual(lst.size(), 0)
+        self.assertIsNone(lst.remove_front())
+        self.assertIsNone(lst.remove_back())
         self.assertEqual(_forward_data(lst), [])
         self.assertEqual(_backward_data(lst), [])
 
@@ -51,6 +53,27 @@ class TestDoublyLinkedList(unittest.TestCase):
         self.assertEqual(lst.size(), 3)
         self.assertEqual(_forward_data(lst), ["A", "B", "C"])
         self.assertEqual(_backward_data(lst), ["C", "B", "A"])
+
+    def test_remove_front_and_back(self):
+        lst = DoublyLinkedList()
+        lst.insert_back("A")
+        lst.insert_back("B")
+        lst.insert_back("C")
+
+        front = lst.remove_front()
+        self.assertEqual(front.data, "A")
+        self.assertIsNone(front.prev)
+        self.assertIsNone(front.next)
+        self.assertEqual(lst.size(), 2)
+        self.assertEqual(_forward_data(lst), ["B", "C"])
+
+        back = lst.remove_back()
+        self.assertEqual(back.data, "C")
+        self.assertIsNone(back.prev)
+        self.assertIsNone(back.next)
+        self.assertEqual(lst.size(), 1)
+        self.assertEqual(_forward_data(lst), ["B"])
+        self.assertEqual(_backward_data(lst), ["B"])
 
 
 if __name__ == "__main__":

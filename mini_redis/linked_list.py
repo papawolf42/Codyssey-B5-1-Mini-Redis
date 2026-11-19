@@ -48,6 +48,14 @@ class DoublyLinkedList:
         self._tail.prev = node
         self._size += 1
 
+    def _unlink(self, node):
+        """리스트에서 node를 떼어낸다. 양옆 포인터 2개만 바꿔 O(1)."""
+        node.prev.next = node.next
+        node.next.prev = node.prev
+        node.prev = None
+        node.next = None
+        self._size -= 1
+
     def insert_front(self, data):
         """맨 앞에 data를 담은 노드를 추가하고 해당 Node를 반환한다. (O(1))"""
         node = Node(data)
@@ -58,6 +66,22 @@ class DoublyLinkedList:
         """맨 뒤에 data를 담은 노드를 추가하고 해당 Node를 반환한다. (O(1))"""
         node = Node(data)
         self._link_back(node)
+        return node
+
+    def remove_front(self):
+        """맨 앞 노드를 제거해 반환한다. 비어 있으면 None을 반환한다. (O(1))"""
+        if self._size == 0:
+            return None
+        node = self._head.next
+        self._unlink(node)
+        return node
+
+    def remove_back(self):
+        """맨 뒤 노드를 제거해 반환한다. 비어 있으면 None을 반환한다. (O(1))"""
+        if self._size == 0:
+            return None
+        node = self._tail.prev
+        self._unlink(node)
         return node
 
     def size(self):
