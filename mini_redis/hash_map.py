@@ -75,6 +75,16 @@ class HashMap:
         bucket = self._buckets[self._index(key)]
         return self._find_node(bucket, key) is not None
 
+    def remove(self, key):
+        """key를 삭제하고 성공 시 True, 없으면 False를 반환한다."""
+        bucket = self._buckets[self._index(key)]
+        node = self._find_node(bucket, key)
+        if node is None:
+            return False
+        bucket.remove_node(node)
+        self._size -= 1
+        return True
+
     def keys(self):
         """저장된 모든 키를 리스트로 반환한다."""
         result = []

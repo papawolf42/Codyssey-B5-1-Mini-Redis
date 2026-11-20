@@ -70,6 +70,40 @@ class TestHashMap(unittest.TestCase):
         for i in range(100):
             self.assertEqual(hm.get("key:" + str(i)), i)
 
+    def test_remove_existing_and_missing(self):
+        hm = HashMap()
+        self.assertFalse(hm.remove("missing"))
+
+        hm.put("a", 1)
+        self.assertTrue(hm.remove("a"))
+        self.assertFalse(hm.remove("a"))
+        self.assertIsNone(hm.get("a"))
+        self.assertFalse(hm.contains("a"))
+        self.assertEqual(hm.size(), 0)
+
+    def test_remove_in_collision_bucket(self):
+        hm = HashMap(capacity=8)
+        hm.put("k0", "v0")
+        hm.put("k8", "v8")
+
+        self.assertTrue(hm.remove("k0"))
+        self.assertIsNone(hm.get("k0"))
+        self.assertEqual(hm.get("k8"), "v8")
+        self.assertEqual(hm.size(), 1)
+
+    def test_remove_half_of_many(self):
+        hm = HashMap()
+        for i in range(100):
+            hm.put("key:" + str(i), i)
+
+        for i in range(0, 100, 2):
+            self.assertTrue(hm.remove("key:" + str(i)))
+
+        self.assertEqual(hm.size(), 50)
+        for i in range(100):
+            expected = None if i % 2 == 0 else i
+            self.assertEqual(hm.get("key:" + str(i)), expected)
+
 
 if __name__ == "__main__":
     unittest.main()
