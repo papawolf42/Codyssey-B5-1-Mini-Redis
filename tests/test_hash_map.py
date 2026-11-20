@@ -66,9 +66,31 @@ class TestHashMap(unittest.TestCase):
         for i in range(100):
             hm.put("key:" + str(i), i)
 
+        self.assertEqual(hm.capacity, 256)
         self.assertEqual(hm.size(), 100)
         for i in range(100):
             self.assertEqual(hm.get("key:" + str(i)), i)
+
+    def test_resize_only_above_three_quarters(self):
+        hm = HashMap(capacity=4)
+        hm.put("a", 1)
+        hm.put("b", 2)
+        hm.put("c", 3)
+        self.assertEqual(hm.capacity, 4)
+
+        hm.put("a", 10)
+        self.assertEqual(hm.capacity, 4)
+        self.assertEqual(hm.size(), 3)
+
+        hm.put("d", 4)
+        self.assertEqual(hm.capacity, 8)
+        self.assertEqual(hm.size(), 4)
+        for key, value in (("a", 10), ("b", 2), ("c", 3), ("d", 4)):
+            self.assertEqual(hm.get(key), value)
+
+        self.assertTrue(hm.remove("c"))
+        self.assertIsNone(hm.get("c"))
+        self.assertEqual(hm.size(), 3)
 
     def test_remove_existing_and_missing(self):
         hm = HashMap()

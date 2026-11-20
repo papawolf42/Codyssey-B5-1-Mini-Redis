@@ -52,6 +52,16 @@ class HashMap:
                 return node
         return None
 
+    def _resize(self, new_capacity):
+        """버킷 수가 바뀌면 인덱스도 달라지므로 기존 항목을 재배치한다."""
+        new_buckets = [DoublyLinkedList() for _ in range(new_capacity)]
+        for bucket in self._buckets:
+            for node in bucket:
+                key, value = node.data
+                index = fnv1a_32(key) % new_capacity
+                new_buckets[index].insert_back((key, value))
+        self._buckets = new_buckets
+
     def put(self, key, value):
         """key에 value를 저장한다. 이미 존재하면 값을 덮어쓴다."""
         bucket = self._buckets[self._index(key)]
@@ -61,6 +71,8 @@ class HashMap:
             return
         bucket.insert_back((key, value))
         self._size += 1
+        if self._size * 4 > self.capacity * 3:
+            self._resize(self.capacity * 2)
 
     def get(self, key):
         """key에 해당하는 값을 반환한다. 없으면 None을 반환한다."""
