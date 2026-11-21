@@ -44,6 +44,16 @@ class TestDoublyLinkedList(unittest.TestCase):
         self.assertEqual(_forward_data(lst), ["C", "B", "A"])
         self.assertEqual(_backward_data(lst), ["A", "B", "C"])
 
+    def test_peek_back_returns_last_node_without_removing_it(self):
+        lst = DoublyLinkedList()
+        self.assertIsNone(lst.peek_back())
+
+        last = lst.insert_back("A")
+        lst.insert_front("B")
+        self.assertIs(lst.peek_back(), last)
+        self.assertEqual(_forward_data(lst), ["B", "A"])
+        self.assertEqual(lst.size(), 2)
+
     def test_insert_back_order(self):
         lst = DoublyLinkedList()
         lst.insert_back("A")

@@ -84,6 +84,12 @@ class DoublyLinkedList:
         self._unlink(node)
         return node
 
+    def peek_back(self):
+        """맨 뒤 노드를 반환한다. 비어 있으면 None을 반환한다. (O(1))"""
+        if self._size == 0:
+            return None
+        return self._tail.prev
+
     def _is_linked_node(self, node):
         """더미가 아니고 현재 리스트에 연결된 노드인지 확인한다."""
         if node is None or node is self._head or node is self._tail:

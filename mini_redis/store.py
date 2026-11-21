@@ -27,6 +27,8 @@ class MiniRedis:
         self._map = HashMap()
         self._lru = DoublyLinkedList()
         self._used_memory = 0
+        self._maxmemory = 0
+        self._evicted_keys = 0
 
     def set(self, key, value):
         """값을 저장하고 키를 최근 사용 리스트 맨 앞으로 보낸다."""
@@ -36,12 +38,13 @@ class MiniRedis:
             lru_node = self._lru.insert_front(key)
             self._map.put(key, Entry(value, lru_node))
             self._used_memory += size
-            return
+        else:
+            self._used_memory += size - _size_of(key, entry.value)
+            entry.value = value
+            entry.expire_at = None
+            self._lru.move_to_front(entry.lru_node)
 
-        self._used_memory += size - _size_of(key, entry.value)
-        entry.value = value
-        entry.expire_at = None
-        self._lru.move_to_front(entry.lru_node)
+        self._evict_until_fit()
 
     def get(self, key):
         """있으면 키를 맨 앞으로 옮기고 값을 반환한다. 없으면 None을 반환한다."""
@@ -64,6 +67,13 @@ class MiniRedis:
         self._used_memory -= size
         return 1
 
+    def _evict_until_fit(self):
+        """한도 안에 들어올 때까지 가장 오래 쓰지 않은 키부터 제거한다."""
+        while self._maxmemory > 0 and self._used_memory > self._maxmemory:
+            oldest = self._lru.peek_back()
+            self._remove_key(oldest.data)
+            self._evicted_keys += 1
+
     def delete(self, key):
         """키를 지웠으면 1, 없으면 0을 반환한다."""
         return self._remove_key(key)
@@ -80,6 +90,10 @@ class MiniRedis:
         """저장된 모든 키를 리스트로 반환한다."""
         return self._map.keys()
 
+    def config_set_maxmemory(self, n):
+        """다음 저장에 적용할 바이트 한도를 설정한다. 0은 무제한이다."""
+        self._maxmemory = n
+
     def info_memory(self):
         """사용 바이트 수, 메모리 한도, 자동 제거 횟수를 반환한다."""
-        return self._used_memory, 0, 0
+        return self._used_memory, self._maxmemory, self._evicted_keys

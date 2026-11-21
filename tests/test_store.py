@@ -106,3 +106,51 @@ class TestMiniRedis(unittest.TestCase):
         self.assertEqual(store.info_memory(), (3, 0, 0))
         self.assertEqual(store.delete("a"), 1)
         self.assertEqual(store.info_memory(), (0, 0, 0))
+
+    def test_set_evicts_oldest_key_when_memory_limit_is_exceeded(self):
+        store = MiniRedis()
+        store.config_set_maxmemory(30)
+        store.set("user:1", "Alice")
+        store.set("user:2", "Bob")
+        store.set("user:3", "Charlie")
+
+        self.assertIsNone(store.get("user:1"))
+        self.assertEqual(sorted(store.keys()), ["user:2", "user:3"])
+        self.assertEqual(store.info_memory(), (22, 30, 1))
+
+    def test_overwrite_moves_key_to_front_before_evicting(self):
+        store = MiniRedis()
+        store.config_set_maxmemory(8)
+        store.set("a", "old")
+        store.set("b", "two")
+        self.assertEqual(store.info_memory(), (8, 8, 0))
+
+        store.set("a", "newer")
+
+        self.assertEqual(store.get("a"), "newer")
+        self.assertIsNone(store.get("b"))
+        self.assertEqual(store.info_memory(), (6, 8, 1))
+
+    def test_zero_memory_limit_is_unlimited(self):
+        store = MiniRedis()
+        store.config_set_maxmemory(4)
+        store.set("a", "one")
+        store.config_set_maxmemory(0)
+        store.set("b", "second")
+
+        self.assertEqual(sorted(store.keys()), ["a", "b"])
+        self.assertEqual(store.info_memory(), (11, 0, 0))
+
+    def test_set_can_evict_multiple_keys_and_counts_accumulate(self):
+        store = MiniRedis()
+        store.config_set_maxmemory(10)
+        for key in ("a", "b", "c"):
+            store.set(key, "hi")
+
+        store.set("d", "1234567")
+        self.assertEqual(store.keys(), ["d"])
+        self.assertEqual(store.info_memory(), (8, 10, 3))
+
+        store.set("e", "hi")
+        self.assertEqual(store.keys(), ["e"])
+        self.assertEqual(store.info_memory(), (3, 10, 4))
