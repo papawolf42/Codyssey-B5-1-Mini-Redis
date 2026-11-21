@@ -74,3 +74,35 @@ class TestMiniRedis(unittest.TestCase):
         self.assertEqual(sorted(store.keys()), ["a", "b"])
         self.assertEqual(store.dbsize(), 2)
         self.assertEqual(_lru_keys(store), ["b", "a"])
+
+    def test_info_memory_counts_utf8_bytes(self):
+        store = MiniRedis()
+        self.assertEqual(store.info_memory(), (0, 0, 0))
+
+        store.set("k", "한")
+        self.assertEqual(store.info_memory(), (4, 0, 0))
+        store.set("키", "")
+        self.assertEqual(store.info_memory(), (7, 0, 0))
+
+    def test_overwrite_updates_memory_by_size_difference(self):
+        store = MiniRedis()
+        store.set("a", "old")
+        store.set("b", "hi")
+        self.assertEqual(store.info_memory(), (7, 0, 0))
+
+        store.set("a", "longer")
+        self.assertEqual(store.info_memory(), (10, 0, 0))
+        store.set("a", "x")
+        self.assertEqual(store.info_memory(), (5, 0, 0))
+
+    def test_delete_releases_memory_only_for_existing_key(self):
+        store = MiniRedis()
+        store.set("a", "hi")
+        store.set("키", "한")
+
+        self.assertEqual(store.delete("키"), 1)
+        self.assertEqual(store.info_memory(), (3, 0, 0))
+        self.assertEqual(store.delete("키"), 0)
+        self.assertEqual(store.info_memory(), (3, 0, 0))
+        self.assertEqual(store.delete("a"), 1)
+        self.assertEqual(store.info_memory(), (0, 0, 0))

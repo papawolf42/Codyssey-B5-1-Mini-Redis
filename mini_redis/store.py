@@ -4,6 +4,11 @@ from mini_redis.hash_map import HashMap
 from mini_redis.linked_list import DoublyLinkedList
 
 
+def _size_of(key, value):
+    """키와 값이 차지하는 UTF-8 바이트 수를 반환한다."""
+    return len(key.encode("utf-8")) + len(value.encode("utf-8"))
+
+
 class Entry:
     """값, 최근 사용 리스트의 노드, 만료 시각을 한곳에 둔다."""
 
@@ -21,15 +26,19 @@ class MiniRedis:
         """빈 해시맵과 빈 최근 사용 리스트를 만든다."""
         self._map = HashMap()
         self._lru = DoublyLinkedList()
+        self._used_memory = 0
 
     def set(self, key, value):
         """값을 저장하고 키를 최근 사용 리스트 맨 앞으로 보낸다."""
+        size = _size_of(key, value)
         entry = self._map.get(key)
         if entry is None:
             lru_node = self._lru.insert_front(key)
             self._map.put(key, Entry(value, lru_node))
+            self._used_memory += size
             return
 
+        self._used_memory += size - _size_of(key, entry.value)
         entry.value = value
         entry.expire_at = None
         self._lru.move_to_front(entry.lru_node)
@@ -44,13 +53,15 @@ class MiniRedis:
         return entry.value
 
     def _remove_key(self, key):
-        """키를 해시맵과 최근 사용 리스트에서 함께 제거한다."""
+        """키를 해시맵과 최근 사용 리스트에서 빼고 메모리 사용량을 줄인다."""
         entry = self._map.get(key)
         if entry is None:
             return 0
 
+        size = _size_of(key, entry.value)
         self._lru.remove_node(entry.lru_node)
         self._map.remove(key)
+        self._used_memory -= size
         return 1
 
     def delete(self, key):
@@ -68,3 +79,7 @@ class MiniRedis:
     def keys(self):
         """저장된 모든 키를 리스트로 반환한다."""
         return self._map.keys()
+
+    def info_memory(self):
+        """사용 바이트 수, 메모리 한도, 자동 제거 횟수를 반환한다."""
+        return self._used_memory, 0, 0
