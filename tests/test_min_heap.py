@@ -1,4 +1,4 @@
-"""최소 힙의 삽입과 조회를 검증한다."""
+"""최소 힙의 삽입, 조회, 제거를 검증한다."""
 
 import unittest
 
@@ -10,6 +10,7 @@ class TestMinHeap(unittest.TestCase):
         heap = MinHeap()
         self.assertEqual(heap.size(), 0)
         self.assertIsNone(heap.peek())
+        self.assertIsNone(heap.pop())
 
     def test_push_keeps_minimum_at_root(self):
         heap = MinHeap()
@@ -28,3 +29,35 @@ class TestMinHeap(unittest.TestCase):
         self.assertEqual(heap.peek(), (1, "a"))
         self.assertEqual(heap.peek(), (1, "a"))
         self.assertEqual(heap.size(), 1)
+
+    def test_pop_only_item(self):
+        heap = MinHeap()
+        heap.push((1, "a"))
+
+        self.assertEqual(heap.pop(), (1, "a"))
+        self.assertEqual(heap.size(), 0)
+        self.assertIsNone(heap.peek())
+
+    def test_pop_returns_items_in_order(self):
+        heap = MinHeap()
+        items = (
+            (1, "a"), (3, "c"), (2, "b"), (4, "d"),
+            (5, "e"), (6, "f"), (9, "i"),
+        )
+        for item in items:
+            heap.push(item)
+
+        self.assertEqual(heap.pop(), (1, "a"))
+        self.assertEqual(heap.peek(), (2, "b"))
+        self.assertEqual(heap.size(), 6)
+        self.assertEqual([heap.pop() for _ in range(6)], sorted(items)[1:])
+        self.assertIsNone(heap.pop())
+
+    def test_pop_breaks_equal_expiration_times_by_key(self):
+        heap = MinHeap()
+        for key in ("c", "a", "b"):
+            heap.push((5, key))
+
+        self.assertEqual(
+            [heap.pop() for _ in range(3)], [(5, "a"), (5, "b"), (5, "c")]
+        )

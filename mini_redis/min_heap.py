@@ -24,6 +24,38 @@ class MinHeap:
             )
             index = parent
 
+    def pop(self):
+        """최솟값을 꺼내 반환한다. 비어 있으면 None을 반환한다."""
+        if not self._items:
+            return None
+
+        minimum = self._items[0]
+        last = self._items.pop()
+        if self._items:
+            self._items[0] = last
+            self._heapify_down(0)
+        return minimum
+
+    def _heapify_down(self, index):
+        """더 작은 자식과 바꾸며 한 경로만 내려가 힙의 순서를 복구한다."""
+        size = len(self._items)
+        while True:
+            left = 2 * index + 1
+            if left >= size:
+                return
+
+            right = left + 1
+            smaller_child = left
+            if right < size and self._items[right] < self._items[left]:
+                smaller_child = right
+
+            if self._items[index] <= self._items[smaller_child]:
+                return
+            self._items[index], self._items[smaller_child] = (
+                self._items[smaller_child], self._items[index]
+            )
+            index = smaller_child
+
     def peek(self):
         """최솟값을 꺼내지 않고 반환한다. 비어 있으면 None을 반환한다."""
         if not self._items:
