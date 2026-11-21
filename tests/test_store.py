@@ -1,0 +1,44 @@
+"""Mini Redis의 문자열 저장과 최근 사용 순서를 검증한다."""
+
+import unittest
+
+from mini_redis.store import MiniRedis
+
+
+def _lru_keys(store):
+    return [node.data for node in store._lru]
+
+
+class TestMiniRedis(unittest.TestCase):
+    def test_set_and_get(self):
+        store = MiniRedis()
+        store.set("msg", "hello")
+
+        self.assertEqual(store.get("msg"), "hello")
+        self.assertEqual(_lru_keys(store), ["msg"])
+
+    def test_get_missing_leaves_lru_order(self):
+        store = MiniRedis()
+        store.set("a", "first")
+        store.set("b", "second")
+
+        self.assertIsNone(store.get("missing"))
+        self.assertEqual(_lru_keys(store), ["b", "a"])
+
+    def test_set_overwrites_value_and_moves_key_to_front(self):
+        store = MiniRedis()
+        store.set("a", "old")
+        store.set("b", "second")
+        store.set("a", "new")
+
+        self.assertEqual(_lru_keys(store), ["a", "b"])
+        self.assertEqual(store.get("a"), "new")
+
+    def test_get_moves_existing_key_to_front(self):
+        store = MiniRedis()
+        store.set("a", "first")
+        store.set("b", "second")
+
+        self.assertEqual(_lru_keys(store), ["b", "a"])
+        self.assertEqual(store.get("a"), "first")
+        self.assertEqual(_lru_keys(store), ["a", "b"])
