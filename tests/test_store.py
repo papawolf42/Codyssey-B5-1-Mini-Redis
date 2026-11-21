@@ -42,3 +42,35 @@ class TestMiniRedis(unittest.TestCase):
         self.assertEqual(_lru_keys(store), ["b", "a"])
         self.assertEqual(store.get("a"), "first")
         self.assertEqual(_lru_keys(store), ["a", "b"])
+
+    def test_delete_removes_key_from_map_and_lru(self):
+        store = MiniRedis()
+        store.set("a", "first")
+        store.set("b", "second")
+        store.set("c", "third")
+        self.assertEqual(store.dbsize(), 3)
+
+        self.assertEqual(store.delete("b"), 1)
+        self.assertEqual(store.delete("b"), 0)
+        self.assertIsNone(store.get("b"))
+        self.assertEqual(store.dbsize(), 2)
+        self.assertEqual(store.dbsize(), store._lru.size())
+        self.assertEqual(_lru_keys(store), ["c", "a"])
+
+    def test_keys_on_empty_store(self):
+        store = MiniRedis()
+
+        self.assertEqual(store.keys(), [])
+        self.assertEqual(store.dbsize(), 0)
+
+    def test_key_queries_do_not_change_lru_order(self):
+        store = MiniRedis()
+        store.set("a", "first")
+        store.set("b", "second")
+
+        self.assertEqual(store.exists("a"), 1)
+        self.assertEqual(_lru_keys(store), ["b", "a"])
+        self.assertEqual(store.exists("missing"), 0)
+        self.assertEqual(sorted(store.keys()), ["a", "b"])
+        self.assertEqual(store.dbsize(), 2)
+        self.assertEqual(_lru_keys(store), ["b", "a"])

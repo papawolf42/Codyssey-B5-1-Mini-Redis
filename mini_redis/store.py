@@ -42,3 +42,29 @@ class MiniRedis:
 
         self._lru.move_to_front(entry.lru_node)
         return entry.value
+
+    def _remove_key(self, key):
+        """키를 해시맵과 최근 사용 리스트에서 함께 제거한다."""
+        entry = self._map.get(key)
+        if entry is None:
+            return 0
+
+        self._lru.remove_node(entry.lru_node)
+        self._map.remove(key)
+        return 1
+
+    def delete(self, key):
+        """키를 지웠으면 1, 없으면 0을 반환한다."""
+        return self._remove_key(key)
+
+    def exists(self, key):
+        """키가 있으면 1, 없으면 0을 반환한다."""
+        return int(self._map.contains(key))
+
+    def dbsize(self):
+        """저장된 키의 수를 반환한다."""
+        return self._map.size()
+
+    def keys(self):
+        """저장된 모든 키를 리스트로 반환한다."""
+        return self._map.keys()
