@@ -1,5 +1,7 @@
 """문자열 값과 최근 사용 순서를 관리하는 Mini Redis 저장소."""
 
+import time
+
 from mini_redis.hash_map import HashMap
 from mini_redis.linked_list import DoublyLinkedList
 
@@ -26,10 +28,11 @@ class Entry:
 class MiniRedis:
     """키는 해시맵으로 찾고, 최근에 사용한 키는 리스트 앞에 둔다."""
 
-    def __init__(self):
-        """빈 해시맵과 빈 최근 사용 리스트를 만든다."""
+    def __init__(self, clock=time.monotonic):
+        """빈 저장소를 만들고 초 단위 시각을 반환하는 시계를 받는다."""
         self._map = HashMap()
         self._lru = DoublyLinkedList()
+        self._clock = clock
         self._used_memory = 0
         self._maxmemory = 0
         self._evicted_keys = 0
@@ -96,6 +99,30 @@ class MiniRedis:
     def keys(self):
         """저장된 모든 키를 리스트로 반환한다."""
         return self._map.keys()
+
+    def expire(self, key, seconds):
+        """만료를 설정하거나 즉시 삭제하면 1, 키가 없으면 0을 반환한다."""
+        entry = self._map.get(key)
+        if entry is None:
+            return 0
+        if seconds <= 0:
+            return self._remove_key(key)
+
+        entry.expire_at = self._clock() + seconds
+        return 1
+
+    def ttl(self, key):
+        """남은 초를 버림해 반환한다. 없거나 만료되면 -2, 만료 시각이 없으면 -1."""
+        entry = self._map.get(key)
+        if entry is None:
+            return -2
+        if entry.expire_at is None:
+            return -1
+
+        remaining = entry.expire_at - self._clock()
+        if remaining <= 0:
+            return -2
+        return int(remaining)
 
     def config_set_maxmemory(self, n):
         """바이트 한도를 즉시 적용한다. 0은 무제한이다."""

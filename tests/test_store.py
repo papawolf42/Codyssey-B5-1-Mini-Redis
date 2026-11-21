@@ -9,6 +9,19 @@ def _lru_keys(store):
     return [node.data for node in store._lru]
 
 
+class FakeClock:
+    """테스트에서 필요할 때만 시간이 흐르는 시계."""
+
+    def __init__(self):
+        self.now = 1000.0
+
+    def __call__(self):
+        return self.now
+
+    def advance(self, seconds):
+        self.now += seconds
+
+
 class TestMiniRedis(unittest.TestCase):
     def test_set_and_get(self):
         store = MiniRedis()
@@ -184,3 +197,52 @@ class TestMiniRedis(unittest.TestCase):
         self.assertEqual(store.info_memory(), (6, 6, 1))
         self.assertEqual(sorted(store.keys()), ["a", "c"])
         self.assertEqual(_lru_keys(store), ["a", "c"])
+
+    def test_ttl_reports_missing_no_expiry_and_remaining_seconds(self):
+        clock = FakeClock()
+        store = MiniRedis(clock=clock)
+        self.assertEqual(store.ttl("a"), -2)
+
+        store.set("a", "hello")
+        self.assertEqual(store.ttl("a"), -1)
+        self.assertEqual(store.expire("a", 3), 1)
+        self.assertEqual(store.ttl("a"), 3)
+        clock.advance(0.001)
+        self.assertEqual(store.ttl("a"), 2)
+        clock.advance(2.5)
+        self.assertEqual(store.ttl("a"), 0)
+        clock.advance(0.5)
+        self.assertEqual(store.ttl("a"), -2)
+
+    def test_expire_replaces_previous_deadline(self):
+        clock = FakeClock()
+        store = MiniRedis(clock=clock)
+        store.set("a", "hello")
+        store.expire("a", 3)
+        store.expire("a", 10)
+
+        clock.advance(5)
+        self.assertEqual(store.get("a"), "hello")
+        self.assertEqual(store.ttl("a"), 5)
+
+    def test_expire_missing_key_returns_zero(self):
+        store = MiniRedis()
+        self.assertEqual(store.expire("missing", 3), 0)
+
+    def test_nonpositive_expiry_deletes_key_immediately(self):
+        store = MiniRedis()
+        for seconds in (0, -5):
+            with self.subTest(seconds=seconds):
+                store.set("a", "hello")
+                self.assertEqual(store.expire("a", seconds), 1)
+                self.assertIsNone(store.get("a"))
+                self.assertEqual(store.ttl("a"), -2)
+
+    def test_set_overwrite_clears_expiry(self):
+        store = MiniRedis(clock=FakeClock())
+        store.set("a", "old")
+        store.expire("a", 3)
+
+        store.set("a", "new")
+
+        self.assertEqual(store.ttl("a"), -1)
