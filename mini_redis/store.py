@@ -9,6 +9,10 @@ def _size_of(key, value):
     return len(key.encode("utf-8")) + len(value.encode("utf-8"))
 
 
+class OOMError(Exception):
+    """키와 값 한 쌍이 메모리 한도를 넘을 때 발생한다."""
+
+
 class Entry:
     """값, 최근 사용 리스트의 노드, 만료 시각을 한곳에 둔다."""
 
@@ -33,6 +37,9 @@ class MiniRedis:
     def set(self, key, value):
         """값을 저장하고 키를 최근 사용 리스트 맨 앞으로 보낸다."""
         size = _size_of(key, value)
+        if self._maxmemory > 0 and size > self._maxmemory:
+            raise OOMError("키와 값의 크기가 메모리 한도를 넘습니다.")
+
         entry = self._map.get(key)
         if entry is None:
             lru_node = self._lru.insert_front(key)
@@ -91,8 +98,9 @@ class MiniRedis:
         return self._map.keys()
 
     def config_set_maxmemory(self, n):
-        """다음 저장에 적용할 바이트 한도를 설정한다. 0은 무제한이다."""
+        """바이트 한도를 즉시 적용한다. 0은 무제한이다."""
         self._maxmemory = n
+        self._evict_until_fit()
 
     def info_memory(self):
         """사용 바이트 수, 메모리 한도, 자동 제거 횟수를 반환한다."""

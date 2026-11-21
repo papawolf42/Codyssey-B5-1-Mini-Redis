@@ -2,7 +2,7 @@
 
 import unittest
 
-from mini_redis.store import MiniRedis
+from mini_redis.store import MiniRedis, OOMError
 
 
 def _lru_keys(store):
@@ -154,3 +154,33 @@ class TestMiniRedis(unittest.TestCase):
         store.set("e", "hi")
         self.assertEqual(store.keys(), ["e"])
         self.assertEqual(store.info_memory(), (3, 10, 4))
+
+    def test_oversized_set_leaves_store_unchanged(self):
+        store = MiniRedis()
+        store.config_set_maxmemory(10)
+        store.set("k", "old")
+        store.set("a", "other")
+
+        for key in ("k", "b"):
+            with self.subTest(key=key):
+                with self.assertRaises(OOMError):
+                    store.set(key, "1234567890")
+                self.assertEqual(_lru_keys(store), ["a", "k"])
+                self.assertEqual(store.info_memory(), (10, 10, 0))
+                self.assertEqual(sorted(store.keys()), ["a", "k"])
+
+        self.assertEqual(store.get("k"), "old")
+        self.assertEqual(store.get("a"), "other")
+
+    def test_lowering_memory_limit_evicts_immediately(self):
+        store = MiniRedis()
+        store.config_set_maxmemory(12)
+        for key in ("a", "b", "c"):
+            store.set(key, "hi")
+        store.get("a")
+
+        store.config_set_maxmemory(6)
+
+        self.assertEqual(store.info_memory(), (6, 6, 1))
+        self.assertEqual(sorted(store.keys()), ["a", "c"])
+        self.assertEqual(_lru_keys(store), ["a", "c"])
