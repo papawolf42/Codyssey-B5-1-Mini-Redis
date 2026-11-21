@@ -4,6 +4,7 @@ import time
 
 from mini_redis.hash_map import HashMap
 from mini_redis.linked_list import DoublyLinkedList
+from mini_redis.min_heap import MinHeap
 
 
 def _size_of(key, value):
@@ -32,6 +33,7 @@ class MiniRedis:
         """빈 저장소를 만들고 초 단위 시각을 반환하는 시계를 받는다."""
         self._map = HashMap()
         self._lru = DoublyLinkedList()
+        self._expiry_heap = MinHeap()
         self._clock = clock
         self._used_memory = 0
         self._maxmemory = 0
@@ -39,6 +41,7 @@ class MiniRedis:
 
     def set(self, key, value):
         """값을 저장하고 키를 최근 사용 리스트 맨 앞으로 보낸다."""
+        self._purge_expired()
         size = _size_of(key, value)
         if self._maxmemory > 0 and size > self._maxmemory:
             raise OOMError("키와 값의 크기가 메모리 한도를 넘습니다.")
@@ -58,6 +61,7 @@ class MiniRedis:
 
     def get(self, key):
         """있으면 키를 맨 앞으로 옮기고 값을 반환한다. 없으면 None을 반환한다."""
+        self._purge_expired()
         entry = self._map.get(key)
         if entry is None:
             return None
@@ -84,51 +88,71 @@ class MiniRedis:
             self._remove_key(oldest.data)
             self._evicted_keys += 1
 
+    def _purge_expired(self):
+        """현재 시각까지 만료된 키를 정리하고 검사에 쓴 시각을 반환한다."""
+        now = self._clock()
+        while True:
+            earliest = self._expiry_heap.peek()
+            if earliest is None or earliest[0] > now:
+                return now
+
+            expire_at, key = self._expiry_heap.pop()
+            entry = self._map.get(key)
+            if entry is not None and entry.expire_at == expire_at:
+                self._remove_key(key)
+
     def delete(self, key):
         """키를 지웠으면 1, 없으면 0을 반환한다."""
+        self._purge_expired()
         return self._remove_key(key)
 
     def exists(self, key):
         """키가 있으면 1, 없으면 0을 반환한다."""
+        self._purge_expired()
         return int(self._map.contains(key))
 
     def dbsize(self):
         """저장된 키의 수를 반환한다."""
+        self._purge_expired()
         return self._map.size()
 
     def keys(self):
         """저장된 모든 키를 리스트로 반환한다."""
+        self._purge_expired()
         return self._map.keys()
 
     def expire(self, key, seconds):
         """만료를 설정하거나 즉시 삭제하면 1, 키가 없으면 0을 반환한다."""
+        now = self._purge_expired()
         entry = self._map.get(key)
         if entry is None:
             return 0
         if seconds <= 0:
             return self._remove_key(key)
 
-        entry.expire_at = self._clock() + seconds
+        expire_at = now + seconds
+        self._expiry_heap.push((expire_at, key))
+        entry.expire_at = expire_at
         return 1
 
     def ttl(self, key):
         """남은 초를 버림해 반환한다. 없거나 만료되면 -2, 만료 시각이 없으면 -1."""
+        now = self._purge_expired()
         entry = self._map.get(key)
         if entry is None:
             return -2
         if entry.expire_at is None:
             return -1
 
-        remaining = entry.expire_at - self._clock()
-        if remaining <= 0:
-            return -2
-        return int(remaining)
+        return int(entry.expire_at - now)
 
     def config_set_maxmemory(self, n):
         """바이트 한도를 즉시 적용한다. 0은 무제한이다."""
+        self._purge_expired()
         self._maxmemory = n
         self._evict_until_fit()
 
     def info_memory(self):
         """사용 바이트 수, 메모리 한도, 자동 제거 횟수를 반환한다."""
+        self._purge_expired()
         return self._used_memory, self._maxmemory, self._evicted_keys

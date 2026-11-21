@@ -225,6 +225,9 @@ class TestMiniRedis(unittest.TestCase):
         self.assertEqual(store.get("a"), "hello")
         self.assertEqual(store.ttl("a"), 5)
 
+        clock.advance(5)
+        self.assertIsNone(store.get("a"))
+
     def test_expire_missing_key_returns_zero(self):
         store = MiniRedis()
         self.assertEqual(store.expire("missing", 3), 0)
@@ -239,10 +242,68 @@ class TestMiniRedis(unittest.TestCase):
                 self.assertEqual(store.ttl("a"), -2)
 
     def test_set_overwrite_clears_expiry(self):
-        store = MiniRedis(clock=FakeClock())
+        clock = FakeClock()
+        store = MiniRedis(clock=clock)
         store.set("a", "old")
         store.expire("a", 3)
 
         store.set("a", "new")
 
         self.assertEqual(store.ttl("a"), -1)
+        clock.advance(3)
+        self.assertEqual(store.get("a"), "new")
+
+    def test_expired_keys_are_removed_at_deadline(self):
+        clock = FakeClock()
+        store = MiniRedis(clock=clock)
+        store.set("a", "hi")
+        store.set("b", "hi")
+        store.set("c", "hi")
+        store.expire("a", 3)
+        store.expire("b", 3)
+        store.expire("c", 5)
+
+        clock.advance(3)
+        self.assertIsNone(store.get("a"))
+        self.assertEqual(store.ttl("b"), -2)
+        self.assertEqual(store.dbsize(), 1)
+        self.assertEqual(store.keys(), ["c"])
+        self.assertEqual(_lru_keys(store), ["c"])
+
+    def test_memory_info_cleans_expired_keys_without_counting_eviction(self):
+        clock = FakeClock()
+        store = MiniRedis(clock=clock)
+        store.set("a", "hi")
+        store.expire("a", 3)
+
+        clock.advance(3)
+        self.assertEqual(store.info_memory(), (0, 0, 0))
+
+    def test_set_recreates_expired_key_with_fresh_node(self):
+        clock = FakeClock()
+        store = MiniRedis(clock=clock)
+        store.config_set_maxmemory(8)
+        store.set("a", "hi")
+        store.set("b", "four")
+        store.expire("b", 3)
+        old_node = store._map.get("b").lru_node
+
+        clock.advance(3)
+        store.set("b", "new")
+
+        self.assertIsNot(store._map.get("b").lru_node, old_node)
+        self.assertEqual(store.info_memory(), (7, 8, 0))
+        self.assertEqual(store.get("a"), "hi")
+        self.assertEqual(store.get("b"), "new")
+        self.assertEqual(store.ttl("b"), -1)
+
+    def test_deleted_key_can_be_recreated_before_old_deadline(self):
+        clock = FakeClock()
+        store = MiniRedis(clock=clock)
+        store.set("a", "old")
+        store.expire("a", 3)
+        store.delete("a")
+        store.set("a", "new")
+
+        clock.advance(3)
+        self.assertEqual(store.get("a"), "new")
